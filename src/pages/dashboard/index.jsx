@@ -1,27 +1,124 @@
 import Layout from "../../components/Layout";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
+
+const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
+
+const findKey = (row = {}, targets = []) => {
+  const keyMap = Object.keys(row).reduce((map, key) => {
+    map[normalizeKey(key)] = key;
+    return map;
+  }, {});
+
+  for (const t of targets) {
+    const found = keyMap[normalizeKey(t)];
+    if (found) return found;
+  }
+  return undefined;
+};
+
+const calculateKpiStats = (data = []) => {
+  const total = Array.isArray(data) ? data.length : 0;
+  const defaults = {
+    totalNotifications: '0',
+    totalLabel: 'Live Data',
+    criticalAlerts: '0',
+    criticalLabel: 'Live Data',
+    activeUnits: '00',
+    activeLabel: 'Units detected',
+    uptime: '0.0%',
+    uptimeLabel: 'Calculated',
+  };
+
+  if (total === 0) return defaults;
+
+  const sample = data[0] || {};
+  const priorityKey = findKey(sample, ['Priority', 'Priority Level', 'Severity', 'Status']);
+  const statusKey = findKey(sample, ['Status']);
+  const unitKey = findKey(sample, ['Units', 'Unit', 'Functional Location', 'Unit Name', 'FunctionalLocation']);
+  const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
+  const breakdownKey = findKey(sample, ['Breakdown', 'Breakdown?', 'Is Breakdown', 'Breakdown Status']);
+  const compareKey = findKey(sample, ['Previous Total', 'Prior Total', 'Last Period', 'Comparison', 'Change']);
+
+  const criticalMatches = ['1', 'high', 'critical', 'emergency'];
+  const criticalAlerts = data.filter((row) => {
+    const raw = String(row[priorityKey] ?? row[statusKey] ?? '').trim().toLowerCase();
+    return criticalMatches.includes(raw);
+  }).length;
+
+  const unitSet = new Set();
+  data.forEach((row) => {
+    let unitVal = String(row[unitKey] ?? row[equipmentKey] ?? '').trim();
+    const m = unitVal.match(/Unit\s*(\d+)/i);
+    if (m) unitVal = `Unit ${m[1]}`;
+    if (unitVal) unitSet.add(unitVal);
+  });
+  const activeUnits = unitSet.size > 0 ? String(unitSet.size).padStart(2, '0') : '00';
+
+  const activeSystems = data.filter((row) => {
+    const br = String(row[breakdownKey] ?? '').trim().toLowerCase();
+    return br === '' || br === 'no';
+  }).length;
+
+  const uptime = total > 0 ? `${((activeSystems / total) * 100).toFixed(1)}%` : '0.0%';
+
+  const totalLabel = (() => {
+    if (!compareKey) return 'Live Data';
+    const compareValue = parseFloat(data[0][compareKey]);
+    if (Number.isNaN(compareValue) || compareValue <= 0) return 'Live Data';
+    const diff = total - compareValue;
+    const percent = ((diff / compareValue) * 100).toFixed(1);
+    return diff >= 0 ? `+${percent}%` : `${percent}%`;
+  })();
+
+  return {
+    totalNotifications: String(total),
+    totalLabel,
+    criticalAlerts: String(criticalAlerts),
+    criticalLabel: 'Live Data',
+    activeUnits,
+    activeLabel: 'Units detected',
+    uptime,
+    uptimeLabel: 'Calculated',
+  };
+};
 
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 'N-2023-124', equip: 'Blast Furnace Pump', status: 'Critical', color: 'rose' },
-    { id: 'N-2023-125', equip: 'Static Panel B2', status: 'In Progress', color: 'indigo' },
-    { id: 'N-2023-128', equip: 'Rotary Crane Unit 4', status: 'Resolved', color: 'emerald' },
-    { id: 'N-2023-130', equip: 'Main Gearbox', status: 'Overdue', color: 'amber' },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [rawData, setRawData] = useState([]);
   const [stats, setStats] = useState({
-    totalNotifications: '1,284',
-    criticalAlerts: '42',
-    activeUnits: '08',
-    uptime: '99.8%'
+    totalNotifications: '0',
+    totalLabel: 'Live Data',
+    criticalAlerts: '0',
+    criticalLabel: 'Live Data',
+    activeUnits: '00',
+    activeLabel: 'Units detected',
+    uptime: '0.0%',
+    uptimeLabel: 'Calculated',
   });
   const [unitPerformance, setUnitPerformance] = useState([
     { name: 'Unit 1', val: 85, color: 'bg-indigo-600' },
     { name: 'Unit 2', val: 62, color: 'bg-amber-500' },
     { name: 'Unit 4', val: 94, color: 'bg-emerald-500' },
   ]);
+
   const fileInputRef = useRef(null);
+  const prevRawSignature = useRef('');
+
+  useEffect(() => {
+    // update stats only when rawData content changes (avoid unnecessary setState)
+    const signature = rawData.length + '|' + (rawData[0] ? Object.keys(rawData[0]).join(',') : '');
+    if (prevRawSignature.current !== signature) {
+      const newStats = calculateKpiStats(rawData);
+      setStats((prev) => {
+        const p = JSON.stringify(prev);
+        const n = JSON.stringify(newStats);
+        return p === n ? prev : newStats;
+      });
+      prevRawSignature.current = signature;
+    }
+  }, [rawData]);
 
   const colorStyles = {
     indigo: { badgeBg: 'bg-indigo-50', badgeText: 'text-indigo-600', badgeRing: 'ring-indigo-600/10', dot: 'bg-indigo-600' },
@@ -35,11 +132,6 @@ const Dashboard = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const getHeaderKey = (row, target) => {
-      const normalized = target.replace(/\s+/g, '').toLowerCase();
-      return Object.keys(row).find(key => key.replace(/\s+/g, '').toLowerCase() === normalized);
-    };
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -49,14 +141,13 @@ const Dashboard = () => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error('Empty file');
-        }
+        if (!jsonData || jsonData.length === 0) throw new Error('Empty file');
 
+        // build notifications for the table
         const updatedNotifications = jsonData.map((row, idx) => {
-          const notificationKey = getHeaderKey(row, 'Notification') || getHeaderKey(row, 'ID');
-          const equipmentKey = getHeaderKey(row, 'Equipment') || getHeaderKey(row, 'Equipment Name');
-          const statusKey = getHeaderKey(row, 'Status');
+          const notificationKey = findKey(row, ['Notification', 'ID']);
+          const equipmentKey = findKey(row, ['Equipment', 'Equipment Name', 'Equip']);
+          const statusKey = findKey(row, ['Status']);
 
           return {
             id: row[notificationKey] || `N-${idx + 1}`,
@@ -67,49 +158,22 @@ const Dashboard = () => {
         });
 
         setNotifications(updatedNotifications);
+        setRawData(jsonData);
 
-        const totalNotifs = updatedNotifications.length;
-        const criticalCount = updatedNotifications.filter(n => n.status === 'Critical').length;
-
-        const unitKey = getHeaderKey(jsonData[0], 'Units') || getHeaderKey(jsonData[0], 'Unit') || getHeaderKey(jsonData[0], 'Unit Name');
-        const unitList = jsonData
-          .map((row) => row[unitKey] || row[getHeaderKey(row, 'Equipment')] )
-          .filter(Boolean)
-          .map((value) => {
-            const match = String(value).match(/Unit\s*(\d+)/i);
-            return match ? match[1] : String(value);
-          });
-        const activeUnitsCount = unitList.length > 0 ? new Set(unitList).size.toString().padStart(2, '0') : '00';
-
-        const uptimeKey = getHeaderKey(jsonData[0], 'Uptime');
-        const uptimeValue = uptimeKey
-          ? String(jsonData[0][uptimeKey]).includes('%')
-            ? String(jsonData[0][uptimeKey])
-            : `${jsonData[0][uptimeKey]}%`
-          : `${((totalNotifs - criticalCount) / Math.max(totalNotifs, 1) * 100).toFixed(1)}%`;
-
-        setStats({
-          totalNotifications: totalNotifs.toString(),
-          criticalAlerts: criticalCount.toString(),
-          activeUnits: activeUnitsCount,
-          uptime: uptimeValue,
-        });
-
-        const mainWorkKey = getHeaderKey(jsonData[0], 'Main Work Ctr') || getHeaderKey(jsonData[0], 'MainWorkCtr') || getHeaderKey(jsonData[0], 'Main Work');
+        // build unit performance from Main Work Ctr (if present)
+        const unitKey = findKey(jsonData[0], ['Units', 'Unit', 'Unit Name', 'Functional Location', 'FunctionalLocation', 'Func Loc']);
+        const mainWorkKey = findKey(jsonData[0], ['Main Work Ctr', 'MainWorkCtr', 'Main Work']);
         const unitPerfData = [];
 
         if (mainWorkKey) {
           const perfMap = {};
           jsonData.forEach((row) => {
             const mainWorkValue = parseFloat(row[mainWorkKey]) || 0;
-            let unitValue = row[unitKey] || row[getHeaderKey(row, 'Equipment')] || 'Unknown';
-            const match = String(unitValue).match(/Unit\s*(\d+)/i);
-            unitValue = match ? `Unit ${match[1]}` : String(unitValue).trim() || 'Unknown';
+            let unitValue = String(row[unitKey] ?? row[findKey(row, ['Equipment', 'Equipment Name'])] ?? 'Unknown');
+            const m = unitValue.match(/Unit\s*(\d+)/i);
+            unitValue = m ? `Unit ${m[1]}` : unitValue.trim() || 'Unknown';
 
-            if (!perfMap[unitValue]) {
-              perfMap[unitValue] = 0;
-            }
-            perfMap[unitValue] += mainWorkValue;
+            perfMap[unitValue] = (perfMap[unitValue] || 0) + mainWorkValue;
           });
 
           const totals = Object.values(perfMap);
@@ -117,27 +181,19 @@ const Dashboard = () => {
           const colorList = ['bg-indigo-600', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-cyan-500'];
           let colorIndex = 0;
 
-          Object.keys(perfMap)
-            .sort()
-            .forEach((unit) => {
-              const value = perfMap[unit];
-              const score = Math.round((value / maxTotal) * 100);
-              unitPerfData.push({
-                name: unit,
-                val: score,
-                color: colorList[colorIndex % colorList.length],
-              });
-              colorIndex++;
-            });
+          Object.keys(perfMap).sort().forEach((unit) => {
+            const value = perfMap[unit];
+            const score = Math.round((value / maxTotal) * 100);
+            unitPerfData.push({ name: unit, val: score, color: colorList[colorIndex % colorList.length] });
+            colorIndex++;
+          });
         }
 
-        if (unitPerfData.length > 0) {
-          setUnitPerformance(unitPerfData);
-        }
+        if (unitPerfData.length > 0) setUnitPerformance(unitPerfData);
 
         setShowUploadDialog(false);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
         alert('Error reading file. Please ensure it has Notification, Equipment, Status, and Main Work Ctr columns.');
       }
     };
@@ -154,7 +210,7 @@ const Dashboard = () => {
           <p className="mt-1 text-slate-500 font-medium">Real-time monitoring for Unit 4 • Steel Plant</p>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => setShowUploadDialog(true)}
             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
           >
@@ -167,17 +223,17 @@ const Dashboard = () => {
       {/* KPI Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: 'Total Notifications', value: stats.totalNotifications, trend: '+12%', color: 'indigo' },
-          { label: 'Critical Alerts', value: stats.criticalAlerts, trend: 'High Priority', color: 'rose' },
-          { label: 'Active Units', value: stats.activeUnits, trend: '4 Recovered', color: 'amber' },
-          { label: 'System Uptime', value: stats.uptime, trend: 'Last 24h', color: 'emerald' },
+          { label: 'Total Notifications', value: stats.totalNotifications, detail: stats.totalLabel, color: 'indigo' },
+          { label: 'Critical Alerts', value: stats.criticalAlerts, detail: stats.criticalLabel, color: 'rose' },
+          { label: 'Active Units', value: stats.activeUnits, detail: stats.activeLabel, color: 'amber' },
+          { label: 'System Uptime', value: stats.uptime, detail: stats.uptimeLabel, color: 'emerald' },
         ].map((stat) => (
           <div key={stat.label} className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
             <div className="mt-4 flex items-end justify-between">
               <h3 className={`text-4xl font-black text-slate-900`}>{stat.value}</h3>
               <span className={`text-xs font-bold px-2 py-1 rounded-lg ${colorStyles[stat.color].badgeBg} ${colorStyles[stat.color].badgeText}`}>
-                {stat.trend}
+                {stat.detail}
               </span>
             </div>
           </div>
@@ -185,7 +241,7 @@ const Dashboard = () => {
       </div>
 
       {/* Modern Filter Bar */}
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+      {/* <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {['All Types', 'Mechanical', 'Electrical', 'Operational'].map((f, i) => (
             <button key={f} className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${i === 0 ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
@@ -196,54 +252,56 @@ const Dashboard = () => {
              <button className="p-2 text-slate-400 hover:text-slate-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg></button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         {/* Table Section */}
-        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900">Live Notification Stream</h3>
             <button className="text-sm font-bold text-indigo-600">View All</button>
           </div>
-          <div className="overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                  <th className="pb-4">Notification</th>
-                  <th className="pb-4">Equipment</th>
-                  <th className="pb-4">Status</th>
-                  <th className="pb-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {notifications.map((row) => (
-                  <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="py-5">
-                      <p className="text-sm font-bold text-slate-900">{row.id}</p>
-                      <p className="text-xs font-medium text-slate-400">Mech • 12 Oct</p>
-                    </td>
-                    <td className="py-5">
-                      <p className="text-sm font-semibold text-slate-700">{row.equip}</p>
-                    </td>
-                    <td className="py-5">
-                      {(() => {
-                        const badge = colorStyles[row.color] || colorStyles.indigo;
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${badge.badgeBg} ${badge.badgeText} ${badge.badgeRing}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} />
-                            {row.status}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-5 text-right">
-                      <button className="rounded-lg px-3 py-1 text-xs font-bold text-slate-400 border border-slate-200 group-hover:bg-white group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">Details</button>
-                    </td>
+          <div className="overflow-hidden flex-1">
+            <div className="max-h-[560px] overflow-y-auto pr-1">
+              <table className="w-full text-left">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                    <th className="pb-4">Notification</th>
+                    <th className="pb-4">Equipment</th>
+                    <th className="pb-4">Status</th>
+                    <th className="pb-4 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {notifications.map((row) => (
+                    <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="py-5">
+                        <p className="text-sm font-bold text-slate-900">{row.id}</p>
+                        <p className="text-xs font-medium text-slate-400">Mech • 12 Oct</p>
+                      </td>
+                      <td className="py-5">
+                        <p className="text-sm font-semibold text-slate-700">{row.equip}</p>
+                      </td>
+                      <td className="py-5">
+                        {(() => {
+                          const badge = colorStyles[row.color] || colorStyles.indigo;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${badge.badgeBg} ${badge.badgeText} ${badge.badgeRing}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} />
+                              {row.status}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-5 text-right">
+                        <button className="rounded-lg px-3 py-1 text-xs font-bold text-slate-400 border border-slate-200 group-hover:bg-white group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">Details</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
