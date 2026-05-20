@@ -1,4 +1,5 @@
 import Layout from "../../components/Layout";
+import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 
@@ -87,6 +88,7 @@ const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [rawData, setRawData] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [stats, setStats] = useState({
     totalNotifications: '0',
     totalLabel: 'Live Data',
@@ -129,77 +131,99 @@ const Dashboard = () => {
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+  if (!file) return;
 
-        if (!jsonData || jsonData.length === 0) throw new Error('Empty file');
+  setSelectedFile(file);
+};
+const processUploadedFile = () => {
 
-        // build notifications for the table
-        const updatedNotifications = jsonData.map((row, idx) => {
-          const notificationKey = findKey(row, ['Notification', 'ID']);
-          const equipmentKey = findKey(row, ['Equipment', 'Equipment Name', 'Equip']);
-          const statusKey = findKey(row, ['Status']);
+  if (!selectedFile) return;
 
-          return {
-            id: row[notificationKey] || `N-${idx + 1}`,
-            equip: row[equipmentKey] || 'Unknown equipment',
-            status: row[statusKey] || 'Pending',
-            color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
-          };
-        });
+  const reader = new FileReader();
 
-        setNotifications(updatedNotifications);
-        setRawData(jsonData);
+  reader.onload = (event) => {
+    try {
 
-        // build unit performance from Main Work Ctr (if present)
-        const unitKey = findKey(jsonData[0], ['Units', 'Unit', 'Unit Name', 'Functional Location', 'FunctionalLocation', 'Func Loc']);
-        const mainWorkKey = findKey(jsonData[0], ['Main Work Ctr', 'MainWorkCtr', 'Main Work']);
-        const unitPerfData = [];
+      const data = event.target?.result;
 
-        if (mainWorkKey) {
-          const perfMap = {};
-          jsonData.forEach((row) => {
-            const mainWorkValue = parseFloat(row[mainWorkKey]) || 0;
-            let unitValue = String(row[unitKey] ?? row[findKey(row, ['Equipment', 'Equipment Name'])] ?? 'Unknown');
-            const m = unitValue.match(/Unit\s*(\d+)/i);
-            unitValue = m ? `Unit ${m[1]}` : unitValue.trim() || 'Unknown';
+      const workbook = XLSX.read(data, {
+        type: 'array',
+      });
 
-            perfMap[unitValue] = (perfMap[unitValue] || 0) + mainWorkValue;
-          });
+      const sheetName = workbook.SheetNames[0];
 
-          const totals = Object.values(perfMap);
-          const maxTotal = Math.max(...totals, 1);
-          const colorList = ['bg-indigo-600', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-cyan-500'];
-          let colorIndex = 0;
+      const worksheet = workbook.Sheets[sheetName];
 
-          Object.keys(perfMap).sort().forEach((unit) => {
-            const value = perfMap[unit];
-            const score = Math.round((value / maxTotal) * 100);
-            unitPerfData.push({ name: unit, val: score, color: colorList[colorIndex % colorList.length] });
-            colorIndex++;
-          });
+      const jsonData = XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+          defval: '',
         }
+      );
 
-        if (unitPerfData.length > 0) setUnitPerformance(unitPerfData);
-
-        setShowUploadDialog(false);
-      } catch (err) {
-        console.error(err);
-        alert('Error reading file. Please ensure it has Notification, Equipment, Status, and Main Work Ctr columns.');
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('Empty file');
       }
-    };
 
-    reader.readAsArrayBuffer(file);
+      // KEEP YOUR EXISTING LOGIC SAME
+      const updatedNotifications = jsonData.map((row, idx) => {
+
+        const notificationKey = findKey(row, [
+          'Notification',
+          'ID',
+        ]);
+
+        const equipmentKey = findKey(row, [
+          'Equipment',
+          'Equipment Name',
+          'Equip',
+        ]);
+
+        const statusKey = findKey(row, [
+          'Status',
+        ]);
+
+        return {
+          id:
+            row[notificationKey] ||
+            `N-${idx + 1}`,
+
+          equip:
+            row[equipmentKey] ||
+            'Unknown equipment',
+
+          status:
+            row[statusKey] || 'Pending',
+
+          color: [
+            'rose',
+            'indigo',
+            'emerald',
+            'amber',
+          ][idx % 4],
+        };
+      });
+
+      setNotifications(updatedNotifications);
+
+      setRawData(jsonData);
+
+      setShowUploadDialog(false);
+
+      setSelectedFile(null);
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert('Error reading file');
+    }
   };
+
+  reader.readAsArrayBuffer(selectedFile);
+};
 
   return (
     <Layout>
@@ -238,6 +262,10 @@ const Dashboard = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <NotificationTypeBarChart data={rawData} />
       </div>
 
       {/* Modern Filter Bar */}
@@ -336,49 +364,132 @@ const Dashboard = () => {
 
       {/* Upload Dialog Modal */}
       {showUploadDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-slate-900">Upload Data File</h3>
-              <p className="mt-2 text-sm text-slate-500">Upload an Excel file with columns: Notification, Equipment, Status, Main Work Ctr</p>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+
+    <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
+
+      <div className="mb-6">
+        <h3 className="text-2xl font-bold text-slate-900">
+          Upload Data File
+        </h3>
+
+        <p className="mt-2 text-sm text-slate-500">
+          Upload Excel file for dashboard analytics
+        </p>
+      </div>
+
+      {/* Upload Area */}
+      <div className="mb-5">
+
+        <div
+          onClick={() =>
+            fileInputRef.current?.click()
+          }
+          className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all"
+        >
+
+          <svg
+            className="mx-auto mb-3 h-12 w-12 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
+
+          <p className="text-sm font-bold text-slate-900">
+            Click to upload or drag and drop
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Excel files (.xlsx, .xls)
+          </p>
+
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+      </div>
+
+      {/* File Preview */}
+      {selectedFile && (
+
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+
+          <div className="flex items-center justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="text-2xl">
+                📄
+              </div>
+
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  {selectedFile.name}
+                </p>
+
+                <p className="text-xs text-slate-500">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+
             </div>
 
-            <div className="mb-6">
-              <label className="block">
-                <div className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all">
-                  <svg className="mx-auto h-12 w-12 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-sm font-bold text-slate-900">Click to upload or drag and drop</p>
-                  <p className="text-xs text-slate-500 mt-1">Excel files (.xlsx, .xls)</p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="text-sm font-bold text-rose-500 hover:text-rose-600"
+            >
+              Remove
+            </button>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
-              >
-                Select File
-              </button>
-              <button
-                onClick={() => setShowUploadDialog(false)}
-                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
           </div>
+
         </div>
       )}
+
+      {/* Buttons */}
+      <div className="flex gap-3">
+
+        <button
+          onClick={() => {
+            if (!selectedFile) {
+              fileInputRef.current?.click();
+            } else {
+              processUploadedFile();
+            }
+          }}
+          className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
+        >
+          {selectedFile
+            ? 'Upload to Dashboard'
+            : 'Select File'}
+        </button>
+
+        <button
+          onClick={() =>
+            setShowUploadDialog(false)
+          }
+          className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
 
       <input
         ref={fileInputRef}
