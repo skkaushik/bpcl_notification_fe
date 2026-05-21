@@ -1,7 +1,7 @@
 
 const Header = () => {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-md px-8 py-4">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-blue-100 backdrop-blur-md px-8 py-6">
       <div className="flex items-center justify-between">
         <div className="relative w-96">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">

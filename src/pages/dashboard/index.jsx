@@ -89,6 +89,8 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [rawData, setRawData] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
   const [stats, setStats] = useState({
     totalNotifications: '0',
     totalLabel: 'Live Data',
@@ -99,12 +101,22 @@ const Dashboard = () => {
     uptime: '0.0%',
     uptimeLabel: 'Calculated',
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
   const [unitPerformance, setUnitPerformance] = useState([
     { name: 'Unit 1', val: 85, color: 'bg-indigo-600' },
     { name: 'Unit 2', val: 62, color: 'bg-amber-500' },
     { name: 'Unit 4', val: 94, color: 'bg-emerald-500' },
   ]);
+  const paginatedNotifications =
+  notifications.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
+const totalPages = Math.ceil(
+  notifications.length / rowsPerPage
+);
   const fileInputRef = useRef(null);
   const prevRawSignature = useRef('');
 
@@ -138,31 +150,25 @@ const Dashboard = () => {
   setSelectedFile(file);
 };
 const processUploadedFile = () => {
-
   if (!selectedFile) return;
-
+  setUploadLoading(true);
+  setUploadMessage("Uploading file...");
   const reader = new FileReader();
-
   reader.onload = (event) => {
     try {
-
       const data = event.target?.result;
-
       const workbook = XLSX.read(data, {
         type: 'array',
       });
-
       const sheetName = workbook.SheetNames[0];
-
       const worksheet = workbook.Sheets[sheetName];
-
+      setUploadMessage("Processing Excel data...");
       const jsonData = XLSX.utils.sheet_to_json(
         worksheet,
         {
           defval: '',
         }
       );
-
       if (!jsonData || jsonData.length === 0) {
         throw new Error('Empty file');
       }
@@ -205,20 +211,27 @@ const processUploadedFile = () => {
           ][idx % 4],
         };
       });
-
+      setUploadMessage("Updating dashboard...");
       setNotifications(updatedNotifications);
-
+      setCurrentPage(1);
       setRawData(jsonData);
 
       setShowUploadDialog(false);
 
       setSelectedFile(null);
+      setUploadLoading(false);
+      setUploadMessage("Dashboard updated successfully!");
+
+setTimeout(() => {
+  setUploadMessage("");
+}, 2500);
 
     } catch (err) {
 
       console.error(err);
 
-      alert('Error reading file');
+      setUploadLoading(false);
+      setUploadMessage("Error uploading file!");
     }
   };
 
@@ -244,6 +257,9 @@ const processUploadedFile = () => {
         </div>
       </div>
 
+      {rawData.length > 0 ? (
+        <>
+      
       {/* KPI Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -253,10 +269,10 @@ const processUploadedFile = () => {
           { label: 'System Uptime', value: stats.uptime, detail: stats.uptimeLabel, color: 'emerald' },
         ].map((stat) => (
           <div key={stat.label} className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
+            <p className="text-s font-bold uppercase tracking-widest text-slate-600">{stat.label}</p>
             <div className="mt-4 flex items-end justify-between">
-              <h3 className={`text-4xl font-black text-slate-900`}>{stat.value}</h3>
-              <span className={`text-xs font-bold px-2 py-1 rounded-lg ${colorStyles[stat.color].badgeBg} ${colorStyles[stat.color].badgeText}`}>
+              <h3 className={`text-3xl font-bold text-slate-900`}>{stat.value}</h3>
+              <span className={`text-xs font-normal px-2 py-1 rounded-lg ${colorStyles[stat.color].badgeBg} ${colorStyles[stat.color].badgeText}`}>
                 {stat.detail}
               </span>
             </div>
@@ -267,20 +283,6 @@ const processUploadedFile = () => {
       <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <NotificationTypeBarChart data={rawData} />
       </div>
-
-      {/* Modern Filter Bar */}
-      {/* <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {['All Types', 'Mechanical', 'Electrical', 'Operational'].map((f, i) => (
-            <button key={f} className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${i === 0 ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
-              {f}
-            </button>
-          ))}
-          <div className="ml-auto flex gap-2 pr-2">
-             <button className="p-2 text-slate-400 hover:text-slate-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg></button>
-          </div>
-        </div>
-      </div> */}
 
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
@@ -302,7 +304,7 @@ const processUploadedFile = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {notifications.map((row) => (
+                 {paginatedNotifications.map((row) => (
                     <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-5">
                         <p className="text-sm font-bold text-slate-900">{row.id}</p>
@@ -328,7 +330,53 @@ const processUploadedFile = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table><div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+
+  <p className="text-sm text-slate-500">
+    Showing{" "}
+    {notifications.length === 0
+      ? 0
+      : (currentPage - 1) * rowsPerPage + 1}
+    -
+    {Math.min(
+      currentPage * rowsPerPage,
+      notifications.length
+    )}{" "}
+    of {notifications.length}
+  </p>
+
+  <div className="flex items-center gap-2">
+
+    <button
+      disabled={currentPage === 1}
+      onClick={() =>
+        setCurrentPage((p) => p - 1)
+      }
+      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Previous
+    </button>
+
+    <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-600">
+      {currentPage}
+    </div>
+
+    <button
+      disabled={
+        currentPage === totalPages ||
+        totalPages === 0
+      }
+      onClick={() =>
+        setCurrentPage((p) => p + 1)
+      }
+      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Next
+    </button>
+
+  </div>
+
+</div>
             </div>
           </div>
         </div>
@@ -351,17 +399,56 @@ const processUploadedFile = () => {
               ))}
             </div>
           </div>
-
-          <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 text-white shadow-xl shadow-indigo-200">
-            <h3 className="text-lg font-bold">Need Maintenance?</h3>
-            <p className="mt-2 text-sm text-indigo-100 leading-relaxed">You have 14 predictive maintenance tasks scheduled for this weekend.</p>
-            <button className="mt-6 w-full rounded-xl bg-white py-3 text-sm font-bold text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors">
-              Review Schedule
-            </button>
-          </div>
         </div>
       </div>
+</>
+     ) : (
+      <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
 
+  {/* Icon */}
+  <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
+    📊
+  </div>
+
+  {/* Heading */}
+  <h2 className="text-3xl font-bold text-slate-900">
+    No Analytics Available
+  </h2>
+
+  {/* Description */}
+  <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-800">
+    Upload an Excel file to start analytics,
+    generate KPIs, visualize charts,
+    and monitor machine notifications.
+  </p>
+
+  {/* Upload Button */}
+  <button
+    onClick={() => setShowUploadDialog(true)}
+    className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+  >
+    Upload Excel File
+  </button>
+
+  {/* Features */}
+  <div className="mt-10 grid gap-4 text-sm text-slate-400 sm:grid-cols-3">
+
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+      📈 KPI Metrics
+    </div>
+
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+      📊 Charts & Analytics
+    </div>
+
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+      🔔 Notification Tables
+    </div>
+
+  </div>
+</div>
+)  
+}
       {/* Upload Dialog Modal */}
       {showUploadDialog && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -457,11 +544,26 @@ const processUploadedFile = () => {
 
         </div>
       )}
+      {uploadMessage && (
 
+  <div
+    className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
+      uploadLoading
+        ? "bg-indigo-50 text-indigo-700"
+        : uploadMessage.includes("success")
+        ? "bg-emerald-50 text-emerald-700"
+        : "bg-rose-50 text-rose-700"
+    }`}
+  >
+    {uploadMessage}
+  </div>
+
+)}
       {/* Buttons */}
       <div className="flex gap-3">
 
-        <button
+       <button
+       disabled={uploadLoading}
           onClick={() => {
             if (!selectedFile) {
               fileInputRef.current?.click();
@@ -471,9 +573,11 @@ const processUploadedFile = () => {
           }}
           className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
         >
-          {selectedFile
-            ? 'Upload to Dashboard'
-            : 'Select File'}
+          {uploadLoading
+  ? "Processing..."
+  : selectedFile
+  ? "Upload to Dashboard"
+  : "Select File"}
         </button>
 
         <button
