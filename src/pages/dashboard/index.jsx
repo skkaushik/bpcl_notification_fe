@@ -2,88 +2,156 @@ import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
-
 const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
-
 const findKey = (row = {}, targets = []) => {
   const keyMap = Object.keys(row).reduce((map, key) => {
     map[normalizeKey(key)] = key;
     return map;
   }, {});
-
   for (const t of targets) {
     const found = keyMap[normalizeKey(t)];
     if (found) return found;
   }
   return undefined;
 };
-
 const calculateKpiStats = (data = []) => {
   const total = Array.isArray(data) ? data.length : 0;
   const defaults = {
-    totalNotifications: '0',
-    totalLabel: 'Live Data',
-    criticalAlerts: '0',
-    criticalLabel: 'Live Data',
-    activeUnits: '00',
-    activeLabel: 'Units detected',
-    uptime: '0.0%',
-    uptimeLabel: 'Calculated',
-  };
-
+  totalNotifications: '0',
+  notif15Days: '0',
+  m2Pending: '0',
+  m1Pending: '0',
+  overdue: '0',
+  impactedUnits: '0',
+};
   if (total === 0) return defaults;
-
   const sample = data[0] || {};
-  const priorityKey = findKey(sample, ['Priority', 'Priority Level', 'Severity', 'Status']);
-  const statusKey = findKey(sample, ['Status']);
-  const unitKey = findKey(sample, ['Units', 'Unit', 'Functional Location', 'Unit Name', 'FunctionalLocation']);
-  const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
-  const breakdownKey = findKey(sample, ['Breakdown', 'Breakdown?', 'Is Breakdown', 'Breakdown Status']);
-  const compareKey = findKey(sample, ['Previous Total', 'Prior Total', 'Last Period', 'Comparison', 'Change']);
+  const typeKey = findKey(sample, [
+  'Type',
+  'Notification Type',
+  'Notif Type',
+  'NotificationType',
+]);
+const notifDateKey = findKey(sample, [
+  'Notif.date',
+  'Notification Date',
+  'Date',
+]);
 
-  const criticalMatches = ['1', 'high', 'critical', 'emergency'];
-  const criticalAlerts = data.filter((row) => {
-    const raw = String(row[priorityKey] ?? row[statusKey] ?? '').trim().toLowerCase();
-    return criticalMatches.includes(raw);
-  }).length;
+const requiredEndKey = findKey(sample, [
+  'Required End',
+  'RequiredEnd',
+]);
 
-  const unitSet = new Set();
-  data.forEach((row) => {
-    let unitVal = String(row[unitKey] ?? row[equipmentKey] ?? '').trim();
-    const m = unitVal.match(/Unit\s*(\d+)/i);
-    if (m) unitVal = `Unit ${m[1]}`;
-    if (unitVal) unitSet.add(unitVal);
-  });
-  const activeUnits = unitSet.size > 0 ? String(unitSet.size).padStart(2, '0') : '00';
+const unitKey = findKey(sample, [
+  'Main WorkCtr',
+  'MainWorkCtr',
+  'Unit',
+]);
 
-  const activeSystems = data.filter((row) => {
-    const br = String(row[breakdownKey] ?? '').trim().toLowerCase();
-    return br === '' || br === 'no';
-  }).length;
+const statusKey = findKey(sample, [
+  'Status',
+  'User status',
+]);
 
-  const uptime = total > 0 ? `${((activeSystems / total) * 100).toFixed(1)}%` : '0.0%';
+const today = new Date();
 
-  const totalLabel = (() => {
-    if (!compareKey) return 'Live Data';
-    const compareValue = parseFloat(data[0][compareKey]);
-    if (Number.isNaN(compareValue) || compareValue <= 0) return 'Live Data';
-    const diff = total - compareValue;
-    const percent = ((diff / compareValue) * 100).toFixed(1);
-    return diff >= 0 ? `+${percent}%` : `${percent}%`;
-  })();
+const diffDays = (dateValue) => {
 
-  return {
-    totalNotifications: String(total),
-    totalLabel,
-    criticalAlerts: String(criticalAlerts),
-    criticalLabel: 'Live Data',
-    activeUnits,
-    activeLabel: 'Units detected',
-    uptime,
-    uptimeLabel: 'Calculated',
-  };
+  if (!dateValue) return 0;
+
+  const d = new Date(dateValue);
+
+  if (isNaN(d)) return 0;
+
+  return Math.floor(
+    (today - d) / (1000 * 60 * 60 * 24)
+  );
 };
 
+const notif15Days = data.filter((row) => {
+  return diffDays(row[notifDateKey]) > 15;
+}).length;
+
+const m2Pending = data.filter((row) => {
+
+  const type = String(
+    row[typeKey] ?? ''
+  ).trim().toUpperCase();
+
+  return (
+    type === 'M2' &&
+    diffDays(row[notifDateKey]) > 7
+  );
+
+}).length;
+
+const m1Pending = data.filter((row) => {
+
+  const type = String(
+    row[typeKey] ?? ''
+  ).trim().toUpperCase();
+
+  return (
+    type === 'M1' &&
+    diffDays(row[notifDateKey]) > 25
+  );
+
+}).length;
+
+const overdue = data.filter((row) => {
+
+  const value = row[requiredEndKey];
+
+  // Ignore only visible blank cells
+  if (
+    value === '' ||
+    value === null ||
+    value === undefined
+  ) {
+    return false;
+  }
+  let requiredDate;
+  // If already Date object
+  if (value instanceof Date) {
+    requiredDate = value;
+  }
+  // If Excel serial number
+  else if (typeof value === 'number') {
+
+    requiredDate = new Date(
+      (value - 25569) * 86400 * 1000
+    );
+  }
+  // If string date
+  else {
+    requiredDate = new Date(
+      String(value).trim()
+    );
+  }
+  // Ignore invalid dates
+  if (isNaN(requiredDate)) {
+    return false;
+  }
+  return requiredDate < today;
+}).length;
+const unitSet = new Set();
+data.forEach((row) => {
+  const val = String(
+    row[unitKey] ?? ''
+  ).trim();
+  if (val) unitSet.add(val);
+});
+const impactedUnits = unitSet.size;
+ return {
+  totalNotifications: String(total),
+  notif15Days: String(notif15Days),
+  m2Pending: String(m2Pending),
+  m1Pending: String(m1Pending),
+  overdue: String(overdue),
+  impactedUnits: String(impactedUnits),
+};
+};
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -91,16 +159,15 @@ const Dashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [stats, setStats] = useState({
-    totalNotifications: '0',
-    totalLabel: 'Live Data',
-    criticalAlerts: '0',
-    criticalLabel: 'Live Data',
-    activeUnits: '00',
-    activeLabel: 'Units detected',
-    uptime: '0.0%',
-    uptimeLabel: 'Calculated',
-  });
+  totalNotifications: '0',
+  notif15Days: '0',
+  m2Pending: '0',
+  m1Pending: '0',
+  overdue: '0',
+  impactedUnits: '0',
+});
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   const [unitPerformance, setUnitPerformance] = useState([
@@ -113,13 +180,11 @@ const Dashboard = () => {
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
-
 const totalPages = Math.ceil(
   notifications.length / rowsPerPage
 );
   const fileInputRef = useRef(null);
   const prevRawSignature = useRef('');
-
   useEffect(() => {
     // update stats only when rawData content changes (avoid unnecessary setState)
     const signature = rawData.length + '|' + (rawData[0] ? Object.keys(rawData[0]).join(',') : '');
@@ -144,9 +209,7 @@ const totalPages = Math.ceil(
 
   const handleFileUpload = (e) => {
   const file = e.target.files?.[0];
-
   if (!file) return;
-
   setSelectedFile(file);
 };
 const processUploadedFile = () => {
@@ -172,72 +235,132 @@ const processUploadedFile = () => {
       if (!jsonData || jsonData.length === 0) {
         throw new Error('Empty file');
       }
+      const sample = jsonData[0] || {};
 
+const notificationKey = findKey(sample, [
+  'Notification',
+  'Notification No',
+  'Notification Number',
+]);
+
+const equipmentKey = findKey(sample, [
+  'Equipment',
+  'Equipment Name',
+  'Equip',
+]);
+
+const statusKey = findKey(sample, [
+  'Status',
+  'User status',
+]);
+
+const typeKey = findKey(sample, [
+  'Type',
+  'Notification Type',
+]);
+
+const workCtrKey = findKey(sample, [
+  'Main WorkCtr',
+]);
+
+const requiredEndKey = findKey(sample, [
+  'Required End',
+]);
+
+const notifDateKey = findKey(sample, [
+  'Notif.date',
+]);
+
+const priorityKey = findKey(sample, [
+  'Priority',
+]);
       // KEEP YOUR EXISTING LOGIC SAME
-      const updatedNotifications = jsonData.map((row, idx) => {
+     const updatedNotifications = jsonData
+  .filter((row) => {
 
-        const notificationKey = findKey(row, [
-          'Notification',
-          'ID',
-        ]);
+    const notificationKey = findKey(row, [
+      'Notification',
+      'Notification No',
+      'Notification Number',
+    ]);
 
-        const equipmentKey = findKey(row, [
-          'Equipment',
-          'Equipment Name',
-          'Equip',
-        ]);
+    return row[notificationKey];
 
-        const statusKey = findKey(row, [
-          'Status',
-        ]);
+  })
+  .map((row, idx) => {
 
-        return {
-          id:
-            row[notificationKey] ||
-            `N-${idx + 1}`,
+return {
 
-          equip:
-            row[equipmentKey] ||
-            'Unknown equipment',
+  id:
+    row[notificationKey] ||
+    `N-${idx + 1}`,
 
-          status:
-            row[statusKey] || 'Pending',
+  equip:
+    row[equipmentKey] ||
+    'Unknown equipment',
 
-          color: [
-            'rose',
-            'indigo',
-            'emerald',
-            'amber',
-          ][idx % 4],
-        };
+  status: (() => {
+
+  const rawStatus = String(
+    row[statusKey] || ''
+  ).toUpperCase();
+
+  if (rawStatus.includes('APRD'))
+    return 'Approved';
+
+  if (rawStatus.includes('APRE'))
+    return 'Pending';
+
+  if (rawStatus.includes('NOPR'))
+    return 'In Progress';
+
+  return rawStatus || 'Pending';
+
+})(),
+
+  type:
+    row[typeKey] || 'N/A',
+
+  workCtr:
+    row[workCtrKey] || 'N/A',
+
+  requiredEnd:
+    row[requiredEndKey] || 'N/A',
+
+  notifDate:
+    row[notifDateKey] || 'N/A',
+
+  priority:
+    row[priorityKey] || 'Normal',
+
+  color: [
+    'rose',
+    'indigo',
+    'emerald',
+    'amber',
+  ][idx % 4],
+
+};
       });
       setUploadMessage("Updating dashboard...");
       setNotifications(updatedNotifications);
       setCurrentPage(1);
       setRawData(jsonData);
-
       setShowUploadDialog(false);
-
       setSelectedFile(null);
       setUploadLoading(false);
       setUploadMessage("Dashboard updated successfully!");
-
 setTimeout(() => {
   setUploadMessage("");
 }, 2500);
-
     } catch (err) {
-
       console.error(err);
-
       setUploadLoading(false);
       setUploadMessage("Error uploading file!");
     }
   };
-
   reader.readAsArrayBuffer(selectedFile);
 };
-
   return (
     <Layout>
       {/* Breadcrumbs & Actions */}
@@ -256,17 +379,47 @@ setTimeout(() => {
           </button>
         </div>
       </div>
-
       {rawData.length > 0 ? (
         <>
-      
       {/* KPI Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Total Notifications', value: stats.totalNotifications, detail: stats.totalLabel, color: 'indigo' },
-          { label: 'Critical Alerts', value: stats.criticalAlerts, detail: stats.criticalLabel, color: 'rose' },
-          { label: 'Active Units', value: stats.activeUnits, detail: stats.activeLabel, color: 'amber' },
-          { label: 'System Uptime', value: stats.uptime, detail: stats.uptimeLabel, color: 'emerald' },
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[     
+  {
+    label: 'Total Notifications',
+    value: stats.totalNotifications,
+    detail: 'Open / pending',
+    color: 'indigo',
+  },
+  {
+    label: 'Notif > 15 days',
+    value: stats.notif15Days,
+    detail: 'Older notifications',
+    color: 'rose',
+  },
+  {
+    label: 'M2 pending > 7 d',
+    value: stats.m2Pending,
+    detail: 'Pending overdue',
+    color: 'amber',
+  },
+  {
+    label: 'M1 pending > 25 d',
+    value: stats.m1Pending,
+    detail: 'Critical pending',
+    color: 'cyan',
+  },
+  {
+    label: 'Due / overdue',
+    value: stats.overdue,
+    detail: 'Past required end',
+    color: 'rose',
+  },
+  {
+    label: 'Units impacted',
+    value: stats.impactedUnits,
+    detail: 'Unique locations',
+    color: 'emerald',
+  },
         ].map((stat) => (
           <div key={stat.label} className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
             <p className="text-s font-bold uppercase tracking-widest text-slate-600">{stat.label}</p>
@@ -279,11 +432,9 @@ setTimeout(() => {
           </div>
         ))}
       </div>
-
       <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <NotificationTypeBarChart data={rawData} />
       </div>
-
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         {/* Table Section */}
@@ -308,7 +459,9 @@ setTimeout(() => {
                     <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-5">
                         <p className="text-sm font-bold text-slate-900">{row.id}</p>
-                        <p className="text-xs font-medium text-slate-400">Mech • 12 Oct</p>
+                        <p className="text-xs font-medium text-slate-400">
+                           {row.type} • {String(row.notifDate)}
+                        </p>
                       </td>
                       <td className="py-5">
                         <p className="text-sm font-semibold text-slate-700">{row.equip}</p>
@@ -325,13 +478,16 @@ setTimeout(() => {
                         })()}
                       </td>
                       <td className="py-5 text-right">
-                        <button className="rounded-lg px-3 py-1 text-xs font-bold text-slate-400 border border-slate-200 group-hover:bg-white group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">Details</button>
+                        <button
+                       onClick={() => setSelectedNotification(row)}
+                       className="rounded-lg px-3 py-1 text-xs font-bold text-slate-400 border border-slate-200 group-hover:bg-white group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">
+                        Details
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table><div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-
   <p className="text-sm text-slate-500">
     Showing{" "}
     {notifications.length === 0
@@ -344,9 +500,7 @@ setTimeout(() => {
     )}{" "}
     of {notifications.length}
   </p>
-
   <div className="flex items-center gap-2">
-
     <button
       disabled={currentPage === 1}
       onClick={() =>
@@ -356,11 +510,9 @@ setTimeout(() => {
     >
       Previous
     </button>
-
     <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-600">
       {currentPage}
     </div>
-
     <button
       disabled={
         currentPage === totalPages ||
@@ -373,14 +525,11 @@ setTimeout(() => {
     >
       Next
     </button>
-
   </div>
-
 </div>
             </div>
           </div>
         </div>
-
         {/* Analytics Side Section */}
         <div className="space-y-8">
           <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -404,24 +553,20 @@ setTimeout(() => {
 </>
      ) : (
       <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
-
   {/* Icon */}
   <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
     📊
   </div>
-
   {/* Heading */}
   <h2 className="text-3xl font-bold text-slate-900">
     No Analytics Available
   </h2>
-
   {/* Description */}
   <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-800">
     Upload an Excel file to start analytics,
     generate KPIs, visualize charts,
     and monitor machine notifications.
   </p>
-
   {/* Upload Button */}
   <button
     onClick={() => setShowUploadDialog(true)}
@@ -429,10 +574,8 @@ setTimeout(() => {
   >
     Upload Excel File
   </button>
-
   {/* Features */}
   <div className="mt-10 grid gap-4 text-sm text-slate-400 sm:grid-cols-3">
-
     <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
       📈 KPI Metrics
     </div>
@@ -444,37 +587,172 @@ setTimeout(() => {
     <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
       🔔 Notification Tables
     </div>
-
   </div>
 </div>
 )  
 }
+{selectedNotification && (
+
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+
+    <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl">
+
+      {/* Header */}
+
+      <div className="mb-6 flex items-center justify-between">
+
+        <div>
+
+          <h2 className="text-2xl font-bold text-slate-900">
+            Notification Details
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Detailed information about selected notification
+          </p>
+
+        </div>
+
+        <button
+          onClick={() =>
+            setSelectedNotification(null)
+          }
+          className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      {/* Content */}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Notification ID
+          </p>
+
+          <p className="mt-2 text-lg font-bold text-slate-900">
+            {selectedNotification.id}
+          </p>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Equipment
+          </p>
+
+          <p className="mt-2 text-lg font-bold text-slate-900">
+            {selectedNotification.equip}
+          </p>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Status
+          </p>
+
+          <p className="mt-2 text-lg font-bold text-slate-900">
+            {selectedNotification.status}
+          </p>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Priority
+          </p>
+
+          <p className="mt-2 text-lg font-bold text-slate-900">
+           {selectedNotification.priority}
+          </p>
+
+        </div>
+
+      </div>
+      <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+  <span className="text-sm font-bold text-slate-500">
+    Type
+  </span>
+
+  <span className="text-sm font-bold text-slate-900">
+    {selectedNotification.type}
+  </span>
+
+</div>
+
+<div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+  <span className="text-sm font-bold text-slate-500">
+    WorkCtr
+  </span>
+
+  <span className="text-sm font-bold text-slate-900">
+    {selectedNotification.workCtr}
+  </span>
+
+</div>
+
+<div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+  <span className="text-sm font-bold text-slate-500">
+    Required End
+  </span>
+
+  <span className="text-sm font-bold text-slate-900">
+    {String(selectedNotification.requiredEnd)}
+  </span>
+
+</div>
+
+      {/* Footer */}
+
+      <div className="mt-8 flex justify-end">
+
+        <button
+          onClick={() =>
+            setSelectedNotification(null)
+          }
+          className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700"
+        >
+          Close
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
       {/* Upload Dialog Modal */}
       {showUploadDialog && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-
     <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
-
       <div className="mb-6">
         <h3 className="text-2xl font-bold text-slate-900">
           Upload Data File
         </h3>
-
         <p className="mt-2 text-sm text-slate-500">
           Upload Excel file for dashboard analytics
         </p>
       </div>
-
       {/* Upload Area */}
       <div className="mb-5">
-
         <div
           onClick={() =>
             fileInputRef.current?.click()
           }
           className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all"
         >
-
           <svg
             className="mx-auto mb-3 h-12 w-12 text-slate-400"
             fill="none"
@@ -488,17 +766,13 @@ setTimeout(() => {
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
             />
           </svg>
-
           <p className="text-sm font-bold text-slate-900">
             Click to upload or drag and drop
           </p>
-
           <p className="mt-1 text-xs text-slate-500">
             Excel files (.xlsx, .xls)
           </p>
-
         </div>
-
         <input
           ref={fileInputRef}
           type="file"
@@ -507,45 +781,33 @@ setTimeout(() => {
           className="hidden"
         />
       </div>
-
       {/* File Preview */}
       {selectedFile && (
-
         <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-
           <div className="flex items-center justify-between">
-
             <div className="flex items-center gap-3">
-
               <div className="text-2xl">
                 📄
               </div>
-
               <div>
                 <p className="text-sm font-bold text-slate-900">
                   {selectedFile.name}
                 </p>
-
                 <p className="text-xs text-slate-500">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </div>
-
             </div>
-
             <button
               onClick={() => setSelectedFile(null)}
               className="text-sm font-bold text-rose-500 hover:text-rose-600"
             >
               Remove
             </button>
-
           </div>
-
         </div>
       )}
       {uploadMessage && (
-
   <div
     className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
       uploadLoading
@@ -557,11 +819,9 @@ setTimeout(() => {
   >
     {uploadMessage}
   </div>
-
 )}
       {/* Buttons */}
       <div className="flex gap-3">
-
        <button
        disabled={uploadLoading}
           onClick={() => {
@@ -579,7 +839,6 @@ setTimeout(() => {
   ? "Upload to Dashboard"
   : "Select File"}
         </button>
-
         <button
           onClick={() =>
             setShowUploadDialog(false)
@@ -588,13 +847,10 @@ setTimeout(() => {
         >
           Cancel
         </button>
-
       </div>
-
     </div>
   </div>
 )}
-
       <input
         ref={fileInputRef}
         type="file"
@@ -605,5 +861,4 @@ setTimeout(() => {
     </Layout>
   );
 };
-
 export default Dashboard;
