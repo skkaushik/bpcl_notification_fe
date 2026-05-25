@@ -1,6 +1,8 @@
 import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
-import { useState, useRef, useEffect } from "react";
+import StatusPieChart from "../../components/StatusPieChart";
+import UnitWiseBarChart from "../../components/UnitWiseBarChart";
+import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
 const findKey = (row = {}, targets = []) => {
@@ -137,10 +139,12 @@ const overdue = data.filter((row) => {
 }).length;
 const unitSet = new Set();
 data.forEach((row) => {
-  const val = String(
-    row[unitKey] ?? ''
-  ).trim();
-  if (val) unitSet.add(val);
+  const val = String(row[unitKey] ?? '').trim().toUpperCase();
+  // Always remove the first two letters, use the rest as unit
+  let unit = val.length > 2 ? val.substring(2) : '';
+  if (unit) {
+    unitSet.add(unit);
+  }
 });
 const impactedUnits = unitSet.size;
  return {
@@ -160,6 +164,37 @@ const Dashboard = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
   const [selectedNotification, setSelectedNotification] = useState(null);
+  // Global filter: 'ALL' or one of M1..M9
+  const [activeTypeFilter, setActiveTypeFilter] = useState('ALL');
+  const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
+
+  // Derive the actual type key from rawData once
+  const typeKeyInData = useMemo(() => {
+    if (!rawData.length) return null;
+    const sample = rawData[0];
+    const keys = Object.keys(sample);
+    return keys.find((k) => {
+      const n = k.replace(/\s+/g, '').toLowerCase();
+      return n.includes('notificationtype') || n.includes('notifictntype') || n === 'type';
+    }) || null;
+  }, [rawData]);
+
+  // Filtered rawData based on active type
+  const filteredRawData = useMemo(() => {
+    if (activeTypeFilter === 'ALL' || !typeKeyInData) return rawData;
+    return rawData.filter((row) =>
+      String(row[typeKeyInData] ?? '').trim().toUpperCase().replace(/\s+/g, '') === activeTypeFilter
+    );
+  }, [rawData, activeTypeFilter, typeKeyInData]);
+
+  // Filtered notifications (table rows) based on active type
+  const filteredNotifications = useMemo(() => {
+    if (activeTypeFilter === 'ALL') return notifications;
+    return notifications.filter(
+      (n) => String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '') === activeTypeFilter
+    );
+  }, [notifications, activeTypeFilter]);
+
   const [stats, setStats] = useState({
   totalNotifications: '0',
   notif15Days: '0',
@@ -176,12 +211,12 @@ const Dashboard = () => {
     { name: 'Unit 4', val: 94, color: 'bg-emerald-500' },
   ]);
   const paginatedNotifications =
-  notifications.slice(
+  filteredNotifications.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
 const totalPages = Math.ceil(
-  notifications.length / rowsPerPage
+  filteredNotifications.length / rowsPerPage
 );
   const fileInputRef = useRef(null);
   const prevRawSignature = useRef('');
@@ -364,9 +399,9 @@ setTimeout(() => {
   return (
     <Layout>
       {/* Breadcrumbs & Actions */}
-      <div className="mb-8 flex items-end justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Machine Overview</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
           <p className="mt-1 text-slate-500 font-medium">Real-time monitoring for Unit 4 • Steel Plant</p>
         </div>
         <div className="flex gap-3">
@@ -381,67 +416,113 @@ setTimeout(() => {
       </div>
       {rawData.length > 0 ? (
         <>
+      {/* Global Filter Bar */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-bold text-slate-500 mr-1">Filter by Type:</span>
+        {['ALL', ...['M1','M2','M3','M4','M5','M6','M7','M8','M9']].map((type) => (
+          <button
+            key={type}
+            onClick={() => { setActiveTypeFilter(type); setCurrentPage(1); }}
+            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all border ${
+              activeTypeFilter === type
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600'
+            }`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
       {/* KPI Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[     
-  {
-    label: 'Total Notifications',
-    value: stats.totalNotifications,
-    detail: 'Open / pending',
-    color: 'indigo',
-  },
-  {
-    label: 'Notif > 15 days',
-    value: stats.notif15Days,
-    detail: 'Older notifications',
-    color: 'rose',
-  },
-  {
-    label: 'M2 pending > 7 d',
-    value: stats.m2Pending,
-    detail: 'Pending overdue',
-    color: 'amber',
-  },
-  {
-    label: 'M1 pending > 25 d',
-    value: stats.m1Pending,
-    detail: 'Critical pending',
-    color: 'cyan',
-  },
-  {
-    label: 'Due / overdue',
-    value: stats.overdue,
-    detail: 'Past required end',
-    color: 'rose',
-  },
-  {
-    label: 'Units impacted',
-    value: stats.impactedUnits,
-    detail: 'Unique locations',
-    color: 'emerald',
-  },
+          {
+            label: 'Total Notifications',
+            value: stats.totalNotifications,
+            detail: 'Open / pending',
+            bgColor: 'bg-indigo-50',
+            textColor: 'text-indigo-600',
+            icon: '📊',
+            trend: '+2.6%'
+          },
+          {
+            label: 'Notif > 15 days',
+            value: stats.notif15Days,
+            detail: 'Older notifications',
+            bgColor: 'bg-purple-50',
+            textColor: 'text-purple-600',
+            icon: '⏱️',
+            trend: '-0.1%'
+          },
+          {
+            label: 'Due / overdue',
+            value: stats.overdue,
+            detail: 'Past required end',
+            bgColor: 'bg-amber-50',
+            textColor: 'text-amber-600',
+            icon: '⚠️',
+            trend: '+2.8%'
+          },
+          {
+            label: 'Units impacted',
+            value: stats.impactedUnits,
+            detail: 'Unique locations',
+            bgColor: 'bg-rose-50',
+            textColor: 'text-rose-600',
+            icon: '🏭',
+            trend: '+3.6%'
+          },
         ].map((stat) => (
-          <div key={stat.label} className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
-            <p className="text-s font-bold uppercase tracking-widest text-slate-600">{stat.label}</p>
-            <div className="mt-4 flex items-end justify-between">
-              <h3 className={`text-3xl font-bold text-slate-900`}>{stat.value}</h3>
-              <span className={`text-xs font-normal px-2 py-1 rounded-lg ${colorStyles[stat.color].badgeBg} ${colorStyles[stat.color].badgeText}`}>
-                {stat.detail}
+          <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
+            <div className="flex justify-between items-start mb-4">
+              <div className={`p-2 rounded-xl bg-white/60 shadow-sm ${stat.textColor} text-xl`}>
+                {stat.icon}
+              </div>
+              <span className={`text-sm font-bold ${stat.textColor}`}>
+                {stat.trend} <svg className="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
               </span>
+            </div>
+            <p className="text-sm font-bold text-slate-600">{stat.label}</p>
+            <div className="mt-1 flex items-end justify-between">
+              <h3 className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</h3>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <NotificationTypeBarChart data={rawData} />
+      {/* Charts Grid */}
+      <div className="mt-8 grid gap-8 lg:grid-cols-3">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+           <StatusPieChart data={filteredNotifications} /> 
+        </div>
+        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <NotificationTypeBarChart data={filteredRawData} />
+        </div>
       </div>
+
+      {/* Static and Rotary Unit-wise Charts */}
+      <div className="mt-8 grid gap-8 grid-cols-1">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
+        </div>
+      </div>
+
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         {/* Table Section */}
         <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-900">Live Notification Stream</h3>
-            <button className="text-sm font-bold text-indigo-600">View All</button>
+            <div className="flex items-center gap-3">
+              {activeTypeFilter !== 'ALL' && (
+                <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">
+                  Filtered: {activeTypeFilter}
+                </span>
+              )}
+              <button className="text-sm font-bold text-indigo-600">View All</button>
+            </div>
           </div>
           <div className="overflow-hidden flex-1">
             <div className="max-h-[560px] overflow-y-auto pr-1">
@@ -496,9 +577,9 @@ setTimeout(() => {
     -
     {Math.min(
       currentPage * rowsPerPage,
-      notifications.length
+      filteredNotifications.length
     )}{" "}
-    of {notifications.length}
+    of {filteredNotifications.length}
   </p>
   <div className="flex items-center gap-2">
     <button

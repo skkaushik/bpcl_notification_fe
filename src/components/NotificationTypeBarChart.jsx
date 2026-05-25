@@ -53,8 +53,8 @@ const buildChartData = (data) => {
 
   console.log('Chart Excel Data:', data);
 
-  const counts = defaultTypes.reduce((acc, type) => {
-    acc[type] = 0;
+  const notificationSets = defaultTypes.reduce((acc, type) => {
+    acc[type] = new Set();
     return acc;
   }, {});
 
@@ -66,40 +66,42 @@ const buildChartData = (data) => {
     }));
   }
 
-  // Detect actual Excel column
-  const key = findNotificationTypeKey(data[0]);
+  // Detect actual Excel columns
+  const typeKey = findNotificationTypeKey(data[0]);
+  
+  const keys = Object.keys(data[0]);
+  const notifTargets = ['notification', 'notificationno', 'notificationnumber', 'notifictn'];
+  const notifKey = keys.find((key) => {
+    const normalized = normalizeKey(key);
+    return notifTargets.some((target) => normalized.includes(target)) && !normalized.includes('type');
+  });
 
-  console.log('Detected Notification Type Key:', key);
+  console.log('Detected Notification Type Key:', typeKey);
+  console.log('Detected Notification Key:', notifKey);
 
-  // If column not found
-  if (!key) {
+  // If columns not found
+  if (!typeKey || !notifKey) {
     return defaultTypes.map((name) => ({
       name,
       value: 0,
     }));
   }
 
-  // Count M1-M9 values
+  // Count unique Notification IDs per M1-M9 value
   data.forEach((row) => {
+    const rawType = String(row[typeKey] ?? '').trim().toUpperCase();
+    const normalizedType = rawType.replace(/\s+/g, '');
+    const notifId = String(row[notifKey] ?? '').trim();
 
-    console.log('Row Value:', row[key]);
-
-    const rawValue = String(row[key] ?? '')
-      .trim()
-      .toUpperCase();
-
-    const normalized = rawValue.replace(/\s+/g, '');
-
-    if (defaultTypes.includes(normalized)) {
-      counts[normalized] =
-        (counts[normalized] || 0) + 1;
+    if (defaultTypes.includes(normalizedType) && notifId) {
+      notificationSets[normalizedType].add(notifId);
     }
   });
 
   // Final chart data
   return defaultTypes.map((name) => ({
     name,
-    value: counts[name],
+    value: notificationSets[name].size,
   }));
 };
 
