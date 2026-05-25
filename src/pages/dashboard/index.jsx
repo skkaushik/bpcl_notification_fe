@@ -1,9 +1,9 @@
 import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
-import StatusPieChart from "../../components/StatusPieChart";
 import UnitWiseBarChart from "../../components/UnitWiseBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
+import Select from "react-select";
 const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
 const findKey = (row = {}, targets = []) => {
   const keyMap = Object.keys(row).reduce((map, key) => {
@@ -138,14 +138,23 @@ const overdue = data.filter((row) => {
   return requiredDate < today;
 }).length;
 const unitSet = new Set();
+
 data.forEach((row) => {
-  const val = String(row[unitKey] ?? '').trim().toUpperCase();
-  // Always remove the first two letters, use the rest as unit
-  let unit = val.length > 2 ? val.substring(2) : '';
-  if (unit) {
-    unitSet.add(unit);
-  }
+
+  const unit = String(
+    row[unitKey] ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  // Ignore blank values only
+  if (!unit) return;
+
+  // Add exact Main WorkCtr value
+  unitSet.add(unit);
+
 });
+
 const impactedUnits = unitSet.size;
  return {
   totalNotifications: String(total),
@@ -165,7 +174,7 @@ const Dashboard = () => {
   const [uploadMessage, setUploadMessage] = useState("");
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
-  const [activeTypeFilter, setActiveTypeFilter] = useState('ALL');
+  const [activeTypeFilter, setActiveTypeFilter] = useState([]);
   const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
 
   // Derive the actual type key from rawData once
@@ -181,19 +190,48 @@ const Dashboard = () => {
 
   // Filtered rawData based on active type
   const filteredRawData = useMemo(() => {
-    if (activeTypeFilter === 'ALL' || !typeKeyInData) return rawData;
-    return rawData.filter((row) =>
-      String(row[typeKeyInData] ?? '').trim().toUpperCase().replace(/\s+/g, '') === activeTypeFilter
-    );
-  }, [rawData, activeTypeFilter, typeKeyInData]);
+
+  if (
+    activeTypeFilter.length === 0 ||
+    !typeKeyInData
+  ) {
+    return rawData;
+  }
+
+  const selectedValues =
+    activeTypeFilter.map((item) => item.value);
+
+  return rawData.filter((row) =>
+    selectedValues.includes(
+      String(row[typeKeyInData] ?? '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '')
+    )
+  );
+
+}, [rawData, activeTypeFilter, typeKeyInData]);
 
   // Filtered notifications (table rows) based on active type
   const filteredNotifications = useMemo(() => {
-    if (activeTypeFilter === 'ALL') return notifications;
-    return notifications.filter(
-      (n) => String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '') === activeTypeFilter
-    );
-  }, [notifications, activeTypeFilter]);
+
+  if (activeTypeFilter.length === 0) {
+    return notifications;
+  }
+
+  const selectedValues =
+    activeTypeFilter.map((item) => item.value);
+
+  return notifications.filter((n) =>
+    selectedValues.includes(
+      String(n.type ?? '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '')
+    )
+  );
+
+}, [notifications, activeTypeFilter]);
 
   const [stats, setStats] = useState({
   totalNotifications: '0',
@@ -261,12 +299,59 @@ const processUploadedFile = () => {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       setUploadMessage("Processing Excel data...");
-      const jsonData = XLSX.utils.sheet_to_json(
-        worksheet,
-        {
-          defval: '',
-        }
-      );
+      const range = XLSX.utils.decode_range(
+  worksheet['!ref']
+);
+
+const visibleRows = [];
+
+for (
+  let rowNum = range.s.r + 1;
+  rowNum <= range.e.r;
+  rowNum++
+) {
+
+  // Skip hidden rows
+  if (
+    worksheet['!rows'] &&
+    worksheet['!rows'][rowNum] &&
+    worksheet['!rows'][rowNum].hidden
+  ) {
+    continue;
+  }
+
+  const row = XLSX.utils.sheet_to_json(
+    worksheet,
+    {
+      range: rowNum,
+      header: 1,
+      defval: '',
+    }
+  )[0];
+
+  visibleRows.push(row);
+
+}
+
+const headers = XLSX.utils.sheet_to_json(
+  worksheet,
+  {
+    header: 1,
+    range: 0,
+  }
+)[0];
+
+const jsonData = visibleRows.map((row) => {
+
+  const obj = {};
+
+  headers.forEach((h, i) => {
+    obj[h] = row[i];
+  });
+
+  return obj;
+
+});
       if (!jsonData || jsonData.length === 0) {
         throw new Error('Empty file');
       }
@@ -404,7 +489,73 @@ setTimeout(() => {
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
           <p className="mt-1 text-slate-500 font-medium">Real-time monitoring for Unit 4 • Steel Plant</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
+          <div className="min-w-[280px]">
+
+  <Select
+    isMulti
+    options={[
+      { value: 'M1', label: 'M1' },
+      { value: 'M2', label: 'M2' },
+      { value: 'M3', label: 'M3' },
+      { value: 'M4', label: 'M4' },
+      { value: 'M5', label: 'M5' },
+      { value: 'M6', label: 'M6' },
+      { value: 'M7', label: 'M7' },
+      { value: 'M8', label: 'M8' },
+      { value: 'M9', label: 'M9' },
+    ]}
+
+    value={activeTypeFilter}
+
+    onChange={(selected) => {
+      setActiveTypeFilter(selected || []);
+      setCurrentPage(1);
+    }}
+
+    placeholder="Filter notification types..."
+
+    className="text-sm"
+
+    styles={{
+
+      control: (base) => ({
+        ...base,
+        minHeight: '46px',
+        borderRadius: '14px',
+        borderColor: '#e2e8f0',
+        boxShadow: 'none',
+        paddingLeft: '4px',
+      }),
+
+      multiValue: (base) => ({
+        ...base,
+        borderRadius: '10px',
+        backgroundColor: '#eef2ff',
+      }),
+
+      multiValueLabel: (base) => ({
+        ...base,
+        color: '#4f46e5',
+        fontWeight: 700,
+      }),
+
+      option: (base, state) => ({
+        ...base,
+        backgroundColor: state.isSelected
+          ? '#4f46e5'
+          : state.isFocused
+          ? '#eef2ff'
+          : 'white',
+        color: state.isSelected
+          ? 'white'
+          : '#0f172a',
+      }),
+
+    }}
+  />
+
+</div>
           <button
             onClick={() => setShowUploadDialog(true)}
             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
@@ -416,23 +567,7 @@ setTimeout(() => {
       </div>
       {rawData.length > 0 ? (
         <>
-      {/* Global Filter Bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <span className="text-sm font-bold text-slate-500 mr-1">Filter by Type:</span>
-        {['ALL', ...['M1','M2','M3','M4','M5','M6','M7','M8','M9']].map((type) => (
-          <button
-            key={type}
-            onClick={() => { setActiveTypeFilter(type); setCurrentPage(1); }}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all border ${
-              activeTypeFilter === type
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600'
-            }`}
-          >
-            {type}
-          </button>
-        ))}
-      </div>
+      
       {/* KPI Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[     
@@ -490,10 +625,7 @@ setTimeout(() => {
         ))}
       </div>
       {/* Charts Grid */}
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-           <StatusPieChart data={filteredNotifications} /> 
-        </div>
+      <div className="mt-8">
         <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <NotificationTypeBarChart data={filteredRawData} />
         </div>
@@ -511,125 +643,6 @@ setTimeout(() => {
 
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
-        {/* Table Section */}
-        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900">Live Notification Stream</h3>
-            <div className="flex items-center gap-3">
-              {activeTypeFilter !== 'ALL' && (
-                <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">
-                  Filtered: {activeTypeFilter}
-                </span>
-              )}
-              <button className="text-sm font-bold text-indigo-600">View All</button>
-            </div>
-          </div>
-          <div className="overflow-hidden flex-1">
-            <div className="max-h-[560px] overflow-y-auto pr-1">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                    <th className="pb-4">Notification</th>
-                    <th className="pb-4">Equipment</th>
-                    <th className="pb-4">Status</th>
-                    <th className="pb-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                 {paginatedNotifications.map((row) => (
-                    <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="py-5">
-                        <p className="text-sm font-bold text-slate-900">{row.id}</p>
-                        <p className="text-xs font-medium text-slate-400">
-                           {row.type} • {String(row.notifDate)}
-                        </p>
-                      </td>
-                      <td className="py-5">
-                        <p className="text-sm font-semibold text-slate-700">{row.equip}</p>
-                      </td>
-                      <td className="py-5">
-                        {(() => {
-                          const badge = colorStyles[row.color] || colorStyles.indigo;
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${badge.badgeBg} ${badge.badgeText} ${badge.badgeRing}`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`} />
-                              {row.status}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-5 text-right">
-                        <button
-                       onClick={() => setSelectedNotification(row)}
-                       className="rounded-lg px-3 py-1 text-xs font-bold text-slate-400 border border-slate-200 group-hover:bg-white group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">
-                        Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table><div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-  <p className="text-sm text-slate-500">
-    Showing{" "}
-    {notifications.length === 0
-      ? 0
-      : (currentPage - 1) * rowsPerPage + 1}
-    -
-    {Math.min(
-      currentPage * rowsPerPage,
-      filteredNotifications.length
-    )}{" "}
-    of {filteredNotifications.length}
-  </p>
-  <div className="flex items-center gap-2">
-    <button
-      disabled={currentPage === 1}
-      onClick={() =>
-        setCurrentPage((p) => p - 1)
-      }
-      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      Previous
-    </button>
-    <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-600">
-      {currentPage}
-    </div>
-    <button
-      disabled={
-        currentPage === totalPages ||
-        totalPages === 0
-      }
-      onClick={() =>
-        setCurrentPage((p) => p + 1)
-      }
-      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      Next
-    </button>
-  </div>
-</div>
-            </div>
-          </div>
-        </div>
-        {/* Analytics Side Section */}
-        <div className="space-y-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Unit Performance</h3>
-            <div className="space-y-5">
-              {unitPerformance.map((item) => (
-                <div key={item.name}>
-                  <div className="flex justify-between text-sm font-bold mb-2">
-                    <span className="text-slate-700">{item.name}</span>
-                    <span className="text-slate-400">{item.val}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.val}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 </>
      ) : (
