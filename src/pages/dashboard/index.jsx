@@ -4,6 +4,15 @@ import UnitWiseBarChart from "../../components/UnitWiseBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import Select from "react-select";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts';
 const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
 const findKey = (row = {}, targets = []) => {
   const keyMap = Object.keys(row).reduce((map, key) => {
@@ -17,7 +26,27 @@ const findKey = (row = {}, targets = []) => {
   return undefined;
 };
 const calculateKpiStats = (data = []) => {
-  const total = Array.isArray(data) ? data.length : 0;
+  const sample = data[0] || {};
+
+  const unitKey = findKey(sample, [
+  'Main WorkCtr',
+  'MainWorkCtr',
+  'Unit',
+]);
+  const total = data.filter((row) => {
+
+  const rawUnit = String(
+    row[unitKey] ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  return (
+    rawUnit.startsWith('MR') ||
+    rawUnit.startsWith('MS')
+  );
+
+}).length;
   const defaults = {
   totalNotifications: '0',
   notif15Days: '0',
@@ -27,12 +56,12 @@ const calculateKpiStats = (data = []) => {
   impactedUnits: '0',
 };
   if (total === 0) return defaults;
-  const sample = data[0] || {};
   const typeKey = findKey(sample, [
   'Type',
   'Notification Type',
   'Notif Type',
   'NotificationType',
+  'Notifictn type',
 ]);
 const notifDateKey = findKey(sample, [
   'Notif.date',
@@ -43,12 +72,6 @@ const notifDateKey = findKey(sample, [
 const requiredEndKey = findKey(sample, [
   'Required End',
   'RequiredEnd',
-]);
-
-const unitKey = findKey(sample, [
-  'Main WorkCtr',
-  'MainWorkCtr',
-  'Unit',
 ]);
 
 const statusKey = findKey(sample, [
@@ -72,18 +95,58 @@ const diffDays = (dateValue) => {
 };
 
 const notif15Days = data.filter((row) => {
-  return diffDays(row[notifDateKey]) > 15;
+
+  const rawUnit = String(
+    row[unitKey] ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  // ONLY MR and MS
+  if (
+    !rawUnit.startsWith('MR') &&
+    !rawUnit.startsWith('MS')
+  ) {
+    return false;
+  }
+
+  // Notification older than 15 days
+  return diffDays(
+    row[notifDateKey]
+  ) > 15;
+
 }).length;
 
 const m2Pending = data.filter((row) => {
 
   const type = String(
     row[typeKey] ?? ''
-  ).trim().toUpperCase();
+  )
+    .trim()
+    .toUpperCase();
+
+  const rawUnit = String(
+    row[unitKey] ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  const isMRorMS =
+    rawUnit.startsWith('MR') ||
+    rawUnit.startsWith('MS');
+
+  const isM2 =
+    type === 'M2';
+
+  const olderThan7 =
+    diffDays(
+      row[notifDateKey]
+    ) > 7;
 
   return (
-    type === 'M2' &&
-    diffDays(row[notifDateKey]) > 7
+    isMRorMS &&
+    isM2 &&
+    olderThan7
   );
 
 }).length;
@@ -92,15 +155,35 @@ const m1Pending = data.filter((row) => {
 
   const type = String(
     row[typeKey] ?? ''
-  ).trim().toUpperCase();
+  )
+    .trim()
+    .toUpperCase();
+
+  const rawUnit = String(
+    row[unitKey] ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  const isMRorMS =
+    rawUnit.startsWith('MR') ||
+    rawUnit.startsWith('MS');
+
+  const isM1 =
+    type === 'M1';
+
+  const olderThan25 =
+    diffDays(
+      row[notifDateKey]
+    ) > 25;
 
   return (
-    type === 'M1' &&
-    diffDays(row[notifDateKey]) > 25
+    isMRorMS &&
+    isM1 &&
+    olderThan25
   );
 
 }).length;
-
 const overdue = data.filter((row) => {
 
   const value = row[requiredEndKey];
@@ -141,21 +224,50 @@ const unitSet = new Set();
 
 data.forEach((row) => {
 
-  const unit = String(
+  // Take only Main WorkCtr column
+  const rawUnit = String(
     row[unitKey] ?? ''
   )
     .trim()
     .toUpperCase();
 
-  // Ignore blank values only
-  if (!unit) return;
+  // Ignore blank values
+  if (!rawUnit) return;
 
-  // Add exact Main WorkCtr value
-  unitSet.add(unit);
+  // ONLY allow MR and MS
+  if (
+    !rawUnit.startsWith('MR') &&
+    !rawUnit.startsWith('MS')
+  ) {
+    return;
+  }
+
+  // Remove MR / MS prefix
+  let cleanedUnit = rawUnit.substring(2);
+
+  // Final clean value
+  cleanedUnit = cleanedUnit.trim();
+
+  // Ignore empty after cleaning
+  if (!cleanedUnit) return;
+
+  // Add unique unit only once
+  unitSet.add(cleanedUnit);
 
 });
 
+// Final unique unit count
 const impactedUnits = unitSet.size;
+
+console.log(
+  "Unique Units:",
+  [...unitSet]
+);
+
+console.log(
+  "Total Impacted Units:",
+  impactedUnits
+);
  return {
   totalNotifications: String(total),
   notif15Days: String(notif15Days),
@@ -164,6 +276,56 @@ const impactedUnits = unitSet.size;
   overdue: String(overdue),
   impactedUnits: String(impactedUnits),
 };
+};
+const buildDueChartData = (data = []) => {
+
+  const groupedData = {};
+
+  data.forEach((row) => {
+
+    const rawWorkCtr = String(
+      row['Main WorkCtr'] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    // Ignore blank
+    if (!rawWorkCtr) return;
+
+    // Only MR and MS
+    if (
+      !rawWorkCtr.startsWith('MR') &&
+      !rawWorkCtr.startsWith('MS')
+    ) {
+      return;
+    }
+
+    // Extract prefix
+    const prefix = rawWorkCtr.substring(0, 2);
+
+    // Remove MR / MS
+    const unit = rawWorkCtr.substring(2);
+
+    if (!unit) return;
+
+    // Create object
+    if (!groupedData[unit]) {
+
+      groupedData[unit] = {
+        unit,
+        MR: 0,
+        MS: 0,
+      };
+
+    }
+
+    // Increase count
+    groupedData[unit][prefix] += 1;
+
+  });
+
+  return Object.values(groupedData);
+
 };
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -232,6 +394,9 @@ const Dashboard = () => {
   );
 
 }, [notifications, activeTypeFilter]);
+const dueChartData = useMemo(() => {
+  return buildDueChartData(filteredRawData);
+}, [filteredRawData]);
 
   const [stats, setStats] = useState({
   totalNotifications: '0',
@@ -312,13 +477,19 @@ for (
 ) {
 
   // Skip hidden rows
-  if (
-    worksheet['!rows'] &&
-    worksheet['!rows'][rowNum] &&
-    worksheet['!rows'][rowNum].hidden
-  ) {
-    continue;
-  }
+  const rowInfo =
+  worksheet['!rows']?.[rowNum];
+
+// Skip hidden OR filtered rows
+if (
+  rowInfo &&
+  (
+    rowInfo.hidden === true ||
+    rowInfo.level !== undefined
+  )
+) {
+  continue;
+}
 
   const row = XLSX.utils.sheet_to_json(
     worksheet,
@@ -569,7 +740,7 @@ setTimeout(() => {
         <>
       
       {/* KPI Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {[     
           {
             label: 'Total Notifications',
@@ -590,15 +761,6 @@ setTimeout(() => {
             trend: '-0.1%'
           },
           {
-            label: 'Due / overdue',
-            value: stats.overdue,
-            detail: 'Past required end',
-            bgColor: 'bg-amber-50',
-            textColor: 'text-amber-600',
-            icon: '⚠️',
-            trend: '+2.8%'
-          },
-          {
             label: 'Units impacted',
             value: stats.impactedUnits,
             detail: 'Unique locations',
@@ -606,6 +768,24 @@ setTimeout(() => {
             textColor: 'text-rose-600',
             icon: '🏭',
             trend: '+3.6%'
+          },
+          {
+            label: 'M2 Pending > 7 days',
+            value: stats.m2Pending,
+            detail: 'M2 overdue notifications',
+            bgColor: 'bg-orange-50',
+            textColor: 'text-orange-600',
+            icon: '🟧',
+            trend: '+1.8%'
+          },
+          {
+            label: 'M1 Pending > 25 days',
+            value: stats.m1Pending,
+            detail: 'M1 overdue notifications',
+            bgColor: 'bg-fuchsia-50',
+            textColor: 'text-fuchsia-600',
+            icon: '🟪',
+            trend: '+0.9%'
           },
         ].map((stat) => (
           <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
@@ -640,7 +820,137 @@ setTimeout(() => {
           <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
         </div>
       </div>
+      
+{/* Total Due Notifications Chart */}
 
+<div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+
+  <div className="mb-6">
+
+    <h3 className="text-xl font-bold text-slate-900">
+      Total Due Notifications
+    </h3>
+
+    <p className="text-sm text-slate-500">
+      MR vs MS notification comparison by unit
+    </p>
+  </div>
+<>
+  <div className="h-[470px] overflow-x-auto">
+
+    <ResponsiveContainer
+      width="100%"
+      height="100%"
+    >
+
+      <BarChart
+        data={dueChartData}
+        margin={{
+          top: 10,
+          right: 30,
+          left: 20,
+          bottom: 60,
+        }}
+        barCategoryGap={18}
+      >
+
+        <CartesianGrid
+          strokeDasharray="3 3"
+          horizontal={false}
+          vertical={true}
+          stroke="#e2e8f0"
+        />
+
+       <XAxis
+  dataKey="unit"
+  axisLine={false}
+  tickLine={false}
+  interval={0}
+  tick={({ x, y, payload }) => (
+
+    <g transform={`translate(${x},${y})`}>
+
+      {/* MR MS Row */}
+
+      <text
+        x={18}
+        y={18}
+        textAnchor="middle"
+        fill="#f59e0b"
+        fontSize="11"
+        fontWeight="700"
+      >
+        MR
+      </text>
+      <text
+        x={-18}
+        y={18}
+        textAnchor="middle"
+        fill="#2563eb"
+        fontSize="11"
+        fontWeight="700"
+      >
+        MS
+      </text>
+
+      {/* UNIT NAME */}
+
+      <text
+        x={0}
+        y={38}
+        textAnchor="middle"
+        fill="#334155"
+        fontSize="13"
+        fontWeight="700"
+      >
+        {payload.value}
+      </text>
+
+    </g>
+
+  )}
+/>
+        <YAxis
+          type="number"
+          axisLine={false}
+          tickLine={false}
+          tick={{
+            fill: '#64748b',
+            fontSize: 12,
+          }}
+        />
+
+        <Tooltip
+          cursor={{
+            fill: 'rgba(99,102,241,0.06)',
+          }}
+          contentStyle={{
+            borderRadius: '14px',
+            border: '1px solid #e2e8f0',
+          }}
+        />
+         <Bar
+          dataKey="MR"
+          fill="#f59e0b"
+          radius={[10, 10, 0, 0]}
+          barSize={28}
+        />
+
+       <Bar
+          dataKey="MS"
+          fill="#2563eb"
+          radius={[10, 10, 0, 0]}
+          barSize={28}
+        />
+
+      </BarChart>
+
+    </ResponsiveContainer>
+
+  </div>
+  </>
+
+</div>
       {/* Main Content Grid */}
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
       </div>

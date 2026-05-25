@@ -6,8 +6,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
-  LabelList,
+  CartesianGrid, 
+   LabelList,
 } from 'recharts';
 
 const normalizeKey = (key = '') =>

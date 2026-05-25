@@ -14,7 +14,7 @@ const Sidebar = () => {
           </div>
         </div>
         <div className="flex flex-col justify-center">
-          <h1 className="text-xl font-black leading-none tracking-tight text-slate-900">BPCL</h1>
+          <h1 className="text-xl font-black leading-none tracking-tight text-slate-900">Notifications Analytics</h1>
           {/* <p className="text-xs font-bold uppercase tracking-widest text-slate-800">Operations Hub</p> */}
         </div>
       </div>
