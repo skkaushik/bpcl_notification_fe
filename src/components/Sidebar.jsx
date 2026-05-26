@@ -5,7 +5,7 @@ const Sidebar = () => {
     
   ]
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 border-r border-gray-300 bg-blue-100 lg:flex flex-col">
+    <aside className="h-screen w-72 flex-shrink-0 border-r border-gray-300 bg-blue-100 flex flex-col">
       <div className="flex items-center gap-4 px-8 py-6 border-b border-gray-300">
         <div className="relative flex-shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl blur opacity-75" />
