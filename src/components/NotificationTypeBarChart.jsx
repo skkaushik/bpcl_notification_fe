@@ -127,90 +127,92 @@ const NotificationTypeBarChart = ({ data = [] }) => {
       </div>
 
       {/* Chart */}
-      <div className="h-[360px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{
-              top: 20,
-              right: 20,
-              left: 20,
-              bottom: 0,
-            }}
-          >
-            {/* Gradient */}
-            <defs>
-              <linearGradient
-                id="notificationBarGradient"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#2563eb" />
-              </linearGradient>
-            </defs>
-
-            {/* Grid */}
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="#e2e8f0"
-            />
-
-            {/* X Axis */}
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: '#64748B',
-                fontSize: 12,
-                fontWeight: 700,
+      <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[600px] h-[300px] sm:h-[360px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{
+                top: 20,
+                right: 20,
+                left: 20,
+                bottom: 0,
               }}
-              tickMargin={12}
-            />
-
-            {/* Y Axis */}
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{
-                fill: '#64748B',
-                fontSize: 12,
-              }}
-              width={40}
-            />
-
-            {/* Tooltip */}
-            <Tooltip
-              cursor={{
-                fill: 'rgba(15, 23, 42, 0.04)',
-              }}
-              formatter={(value) => [
-                value,
-                'Notifications',
-              ]}
-            />
-
-            {/* Bars */}
-            <Bar
-              dataKey="value"
-              fill="url(#notificationBarGradient)"
-              radius={[12, 12, 0, 0]}
-              animationDuration={800}
             >
-              <LabelList
-                dataKey="value"
-                position="top"
-                fill="#0f172a"
-                fontSize={12}
-                fontWeight={700}
+              {/* Gradient */}
+              <defs>
+                <linearGradient
+                  id="notificationBarGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+              </defs>
+
+              {/* Grid */}
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#e2e8f0"
               />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+
+              {/* X Axis */}
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: '#64748B',
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+                tickMargin={12}
+              />
+
+              {/* Y Axis */}
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: '#64748B',
+                  fontSize: 12,
+                }}
+                width={40}
+              />
+
+              {/* Tooltip */}
+              <Tooltip
+                cursor={{
+                  fill: 'rgba(15, 23, 42, 0.04)',
+                }}
+                formatter={(value) => [
+                  value,
+                  'Notifications',
+                ]}
+              />
+
+              {/* Bars */}
+              <Bar
+                dataKey="value"
+                fill="url(#notificationBarGradient)"
+                radius={[12, 12, 0, 0]}
+                animationDuration={800}
+              >
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  fill="#0f172a"
+                  fontSize={12}
+                  fontWeight={700}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

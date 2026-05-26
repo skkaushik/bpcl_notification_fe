@@ -29,253 +29,253 @@ const calculateKpiStats = (data = []) => {
   const sample = data[0] || {};
 
   const unitKey = findKey(sample, [
-  'Main WorkCtr',
-  'MainWorkCtr',
-  'Unit',
-]);
+    'Main WorkCtr',
+    'MainWorkCtr',
+    'Unit',
+  ]);
   const total = data.filter((row) => {
 
-  const rawUnit = String(
-    row[unitKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
 
-  return (
-    rawUnit.startsWith('MR') ||
-    rawUnit.startsWith('MS')
-  );
+    return (
+      rawUnit.startsWith('MR') ||
+      rawUnit.startsWith('MS')
+    );
 
-}).length;
+  }).length;
   const defaults = {
-  totalNotifications: '0',
-  notif15Days: '0',
-  m2Pending: '0',
-  m1Pending: '0',
-  overdue: '0',
-  impactedUnits: '0',
-};
+    totalNotifications: '0',
+    notif15Days: '0',
+    m2Pending: '0',
+    m1Pending: '0',
+    overdue: '0',
+    impactedUnits: '0',
+  };
   if (total === 0) return defaults;
   const typeKey = findKey(sample, [
-  'Type',
-  'Notification Type',
-  'Notif Type',
-  'NotificationType',
-  'Notifictn type',
-]);
-const notifDateKey = findKey(sample, [
-  'Notif.date',
-  'Notification Date',
-  'Date',
-]);
+    'Type',
+    'Notification Type',
+    'Notif Type',
+    'NotificationType',
+    'Notifictn type',
+  ]);
+  const notifDateKey = findKey(sample, [
+    'Notif.date',
+    'Notification Date',
+    'Date',
+  ]);
 
-const requiredEndKey = findKey(sample, [
-  'Required End',
-  'RequiredEnd',
-]);
+  const requiredEndKey = findKey(sample, [
+    'Required End',
+    'RequiredEnd',
+  ]);
 
-const statusKey = findKey(sample, [
-  'Status',
-  'User status',
-]);
+  const statusKey = findKey(sample, [
+    'Status',
+    'User status',
+  ]);
 
-const today = new Date();
+  const today = new Date();
 
-const diffDays = (dateValue) => {
+  const diffDays = (dateValue) => {
 
-  if (!dateValue) return 0;
+    if (!dateValue) return 0;
 
-  const d = new Date(dateValue);
+    const d = new Date(dateValue);
 
-  if (isNaN(d)) return 0;
+    if (isNaN(d)) return 0;
 
-  return Math.floor(
-    (today - d) / (1000 * 60 * 60 * 24)
-  );
-};
-
-const notif15Days = data.filter((row) => {
-
-  const rawUnit = String(
-    row[unitKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
-
-  // ONLY MR and MS
-  if (
-    !rawUnit.startsWith('MR') &&
-    !rawUnit.startsWith('MS')
-  ) {
-    return false;
-  }
-
-  // Notification older than 15 days
-  return diffDays(
-    row[notifDateKey]
-  ) > 15;
-
-}).length;
-
-const m2Pending = data.filter((row) => {
-
-  const type = String(
-    row[typeKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
-
-  const rawUnit = String(
-    row[unitKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
-
-  const isMRorMS =
-    rawUnit.startsWith('MR') ||
-    rawUnit.startsWith('MS');
-
-  const isM2 =
-    type === 'M2';
-
-  const olderThan7 =
-    diffDays(
-      row[notifDateKey]
-    ) > 7;
-
-  return (
-    isMRorMS &&
-    isM2 &&
-    olderThan7
-  );
-
-}).length;
-
-const m1Pending = data.filter((row) => {
-
-  const type = String(
-    row[typeKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
-
-  const rawUnit = String(
-    row[unitKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
-
-  const isMRorMS =
-    rawUnit.startsWith('MR') ||
-    rawUnit.startsWith('MS');
-
-  const isM1 =
-    type === 'M1';
-
-  const olderThan25 =
-    diffDays(
-      row[notifDateKey]
-    ) > 25;
-
-  return (
-    isMRorMS &&
-    isM1 &&
-    olderThan25
-  );
-
-}).length;
-const overdue = data.filter((row) => {
-
-  const value = row[requiredEndKey];
-
-  // Ignore only visible blank cells
-  if (
-    value === '' ||
-    value === null ||
-    value === undefined
-  ) {
-    return false;
-  }
-  let requiredDate;
-  // If already Date object
-  if (value instanceof Date) {
-    requiredDate = value;
-  }
-  // If Excel serial number
-  else if (typeof value === 'number') {
-
-    requiredDate = new Date(
-      (value - 25569) * 86400 * 1000
+    return Math.floor(
+      (today - d) / (1000 * 60 * 60 * 24)
     );
-  }
-  // If string date
-  else {
-    requiredDate = new Date(
-      String(value).trim()
+  };
+
+  const notif15Days = data.filter((row) => {
+
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    // ONLY MR and MS
+    if (
+      !rawUnit.startsWith('MR') &&
+      !rawUnit.startsWith('MS')
+    ) {
+      return false;
+    }
+
+    // Notification older than 15 days
+    return diffDays(
+      row[notifDateKey]
+    ) > 15;
+
+  }).length;
+
+  const m2Pending = data.filter((row) => {
+
+    const type = String(
+      row[typeKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    const isMRorMS =
+      rawUnit.startsWith('MR') ||
+      rawUnit.startsWith('MS');
+
+    const isM2 =
+      type === 'M2';
+
+    const olderThan7 =
+      diffDays(
+        row[notifDateKey]
+      ) > 7;
+
+    return (
+      isMRorMS &&
+      isM2 &&
+      olderThan7
     );
-  }
-  // Ignore invalid dates
-  if (isNaN(requiredDate)) {
-    return false;
-  }
-  return requiredDate < today;
-}).length;
-const unitSet = new Set();
 
-data.forEach((row) => {
+  }).length;
 
-  // Take only Main WorkCtr column
-  const rawUnit = String(
-    row[unitKey] ?? ''
-  )
-    .trim()
-    .toUpperCase();
+  const m1Pending = data.filter((row) => {
 
-  // Ignore blank values
-  if (!rawUnit) return;
+    const type = String(
+      row[typeKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
 
-  // ONLY allow MR and MS
-  if (
-    !rawUnit.startsWith('MR') &&
-    !rawUnit.startsWith('MS')
-  ) {
-    return;
-  }
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
 
-  // Remove MR / MS prefix
-  let cleanedUnit = rawUnit.substring(2);
+    const isMRorMS =
+      rawUnit.startsWith('MR') ||
+      rawUnit.startsWith('MS');
 
-  // Final clean value
-  cleanedUnit = cleanedUnit.trim();
+    const isM1 =
+      type === 'M1';
 
-  // Ignore empty after cleaning
-  if (!cleanedUnit) return;
+    const olderThan25 =
+      diffDays(
+        row[notifDateKey]
+      ) > 25;
 
-  // Add unique unit only once
-  unitSet.add(cleanedUnit);
+    return (
+      isMRorMS &&
+      isM1 &&
+      olderThan25
+    );
 
-});
+  }).length;
+  const overdue = data.filter((row) => {
 
-// Final unique unit count
-const impactedUnits = unitSet.size;
+    const value = row[requiredEndKey];
 
-console.log(
-  "Unique Units:",
-  [...unitSet]
-);
+    // Ignore only visible blank cells
+    if (
+      value === '' ||
+      value === null ||
+      value === undefined
+    ) {
+      return false;
+    }
+    let requiredDate;
+    // If already Date object
+    if (value instanceof Date) {
+      requiredDate = value;
+    }
+    // If Excel serial number
+    else if (typeof value === 'number') {
 
-console.log(
-  "Total Impacted Units:",
-  impactedUnits
-);
- return {
-  totalNotifications: String(total),
-  notif15Days: String(notif15Days),
-  m2Pending: String(m2Pending),
-  m1Pending: String(m1Pending),
-  overdue: String(overdue),
-  impactedUnits: String(impactedUnits),
-};
+      requiredDate = new Date(
+        (value - 25569) * 86400 * 1000
+      );
+    }
+    // If string date
+    else {
+      requiredDate = new Date(
+        String(value).trim()
+      );
+    }
+    // Ignore invalid dates
+    if (isNaN(requiredDate)) {
+      return false;
+    }
+    return requiredDate < today;
+  }).length;
+  const unitSet = new Set();
+
+  data.forEach((row) => {
+
+    // Take only Main WorkCtr column
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    // Ignore blank values
+    if (!rawUnit) return;
+
+    // ONLY allow MR and MS
+    if (
+      !rawUnit.startsWith('MR') &&
+      !rawUnit.startsWith('MS')
+    ) {
+      return;
+    }
+
+    // Remove MR / MS prefix
+    let cleanedUnit = rawUnit.substring(2);
+
+    // Final clean value
+    cleanedUnit = cleanedUnit.trim();
+
+    // Ignore empty after cleaning
+    if (!cleanedUnit) return;
+
+    // Add unique unit only once
+    unitSet.add(cleanedUnit);
+
+  });
+
+  // Final unique unit count
+  const impactedUnits = unitSet.size;
+
+  console.log(
+    "Unique Units:",
+    [...unitSet]
+  );
+
+  console.log(
+    "Total Impacted Units:",
+    impactedUnits
+  );
+  return {
+    totalNotifications: String(total),
+    notif15Days: String(notif15Days),
+    m2Pending: String(m2Pending),
+    m1Pending: String(m1Pending),
+    overdue: String(overdue),
+    impactedUnits: String(impactedUnits),
+  };
 };
 const buildDueChartData = (data = []) => {
 
@@ -353,59 +353,59 @@ const Dashboard = () => {
   // Filtered rawData based on active type
   const filteredRawData = useMemo(() => {
 
-  if (
-    activeTypeFilter.length === 0 ||
-    !typeKeyInData
-  ) {
-    return rawData;
-  }
+    if (
+      activeTypeFilter.length === 0 ||
+      !typeKeyInData
+    ) {
+      return rawData;
+    }
 
-  const selectedValues =
-    activeTypeFilter.map((item) => item.value);
+    const selectedValues =
+      activeTypeFilter.map((item) => item.value);
 
-  return rawData.filter((row) =>
-    selectedValues.includes(
-      String(row[typeKeyInData] ?? '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '')
-    )
-  );
+    return rawData.filter((row) =>
+      selectedValues.includes(
+        String(row[typeKeyInData] ?? '')
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, '')
+      )
+    );
 
-}, [rawData, activeTypeFilter, typeKeyInData]);
+  }, [rawData, activeTypeFilter, typeKeyInData]);
 
   // Filtered notifications (table rows) based on active type
   const filteredNotifications = useMemo(() => {
 
-  if (activeTypeFilter.length === 0) {
-    return notifications;
-  }
+    if (activeTypeFilter.length === 0) {
+      return notifications;
+    }
 
-  const selectedValues =
-    activeTypeFilter.map((item) => item.value);
+    const selectedValues =
+      activeTypeFilter.map((item) => item.value);
 
-  return notifications.filter((n) =>
-    selectedValues.includes(
-      String(n.type ?? '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '')
-    )
-  );
+    return notifications.filter((n) =>
+      selectedValues.includes(
+        String(n.type ?? '')
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, '')
+      )
+    );
 
-}, [notifications, activeTypeFilter]);
-const dueChartData = useMemo(() => {
-  return buildDueChartData(filteredRawData);
-}, [filteredRawData]);
+  }, [notifications, activeTypeFilter]);
+  const dueChartData = useMemo(() => {
+    return buildDueChartData(filteredRawData);
+  }, [filteredRawData]);
 
   const [stats, setStats] = useState({
-  totalNotifications: '0',
-  notif15Days: '0',
-  m2Pending: '0',
-  m1Pending: '0',
-  overdue: '0',
-  impactedUnits: '0',
-});
+    totalNotifications: '0',
+    notif15Days: '0',
+    m2Pending: '0',
+    m1Pending: '0',
+    overdue: '0',
+    impactedUnits: '0',
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   const [unitPerformance, setUnitPerformance] = useState([
@@ -414,13 +414,13 @@ const dueChartData = useMemo(() => {
     { name: 'Unit 4', val: 94, color: 'bg-emerald-500' },
   ]);
   const paginatedNotifications =
-  filteredNotifications.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    filteredNotifications.slice(
+      (currentPage - 1) * rowsPerPage,
+      currentPage * rowsPerPage
+    );
+  const totalPages = Math.ceil(
+    filteredNotifications.length / rowsPerPage
   );
-const totalPages = Math.ceil(
-  filteredNotifications.length / rowsPerPage
-);
   const fileInputRef = useRef(null);
   const prevRawSignature = useRef('');
   useEffect(() => {
@@ -446,815 +446,817 @@ const totalPages = Math.ceil(
   };
 
   const handleFileUpload = (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  setSelectedFile(file);
-};
-const processUploadedFile = () => {
-  if (!selectedFile) return;
-  setUploadLoading(true);
-  setUploadMessage("Uploading file...");
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const data = event.target?.result;
-      const workbook = XLSX.read(data, {
-        type: 'array',
-      });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      setUploadMessage("Processing Excel data...");
-      const range = XLSX.utils.decode_range(
-  worksheet['!ref']
-);
-
-const visibleRows = [];
-
-for (
-  let rowNum = range.s.r + 1;
-  rowNum <= range.e.r;
-  rowNum++
-) {
-
-  // Skip hidden rows
-  const rowInfo =
-  worksheet['!rows']?.[rowNum];
-
-// Skip hidden OR filtered rows
-if (
-  rowInfo &&
-  (
-    rowInfo.hidden === true ||
-    rowInfo.level !== undefined
-  )
-) {
-  continue;
-}
-
-  const row = XLSX.utils.sheet_to_json(
-    worksheet,
-    {
-      range: rowNum,
-      header: 1,
-      defval: '',
-    }
-  )[0];
-
-  visibleRows.push(row);
-
-}
-
-const headers = XLSX.utils.sheet_to_json(
-  worksheet,
-  {
-    header: 1,
-    range: 0,
-  }
-)[0];
-
-const jsonData = visibleRows.map((row) => {
-
-  const obj = {};
-
-  headers.forEach((h, i) => {
-    obj[h] = row[i];
-  });
-
-  return obj;
-
-});
-      if (!jsonData || jsonData.length === 0) {
-        throw new Error('Empty file');
-      }
-      const sample = jsonData[0] || {};
-
-const notificationKey = findKey(sample, [
-  'Notification',
-  'Notification No',
-  'Notification Number',
-]);
-
-const equipmentKey = findKey(sample, [
-  'Equipment',
-  'Equipment Name',
-  'Equip',
-]);
-
-const statusKey = findKey(sample, [
-  'Status',
-  'User status',
-]);
-
-const typeKey = findKey(sample, [
-  'Type',
-  'Notification Type',
-]);
-
-const workCtrKey = findKey(sample, [
-  'Main WorkCtr',
-]);
-
-const requiredEndKey = findKey(sample, [
-  'Required End',
-]);
-
-const notifDateKey = findKey(sample, [
-  'Notif.date',
-]);
-
-const priorityKey = findKey(sample, [
-  'Priority',
-]);
-      // KEEP YOUR EXISTING LOGIC SAME
-     const updatedNotifications = jsonData
-  .filter((row) => {
-
-    const notificationKey = findKey(row, [
-      'Notification',
-      'Notification No',
-      'Notification Number',
-    ]);
-
-    return row[notificationKey];
-
-  })
-  .map((row, idx) => {
-
-return {
-
-  id:
-    row[notificationKey] ||
-    `N-${idx + 1}`,
-
-  equip:
-    row[equipmentKey] ||
-    'Unknown equipment',
-
-  status: (() => {
-
-  const rawStatus = String(
-    row[statusKey] || ''
-  ).toUpperCase();
-
-  if (rawStatus.includes('APRD'))
-    return 'Approved';
-
-  if (rawStatus.includes('APRE'))
-    return 'Pending';
-
-  if (rawStatus.includes('NOPR'))
-    return 'In Progress';
-
-  return rawStatus || 'Pending';
-
-})(),
-
-  type:
-    row[typeKey] || 'N/A',
-
-  workCtr:
-    row[workCtrKey] || 'N/A',
-
-  requiredEnd:
-    row[requiredEndKey] || 'N/A',
-
-  notifDate:
-    row[notifDateKey] || 'N/A',
-
-  priority:
-    row[priorityKey] || 'Normal',
-
-  color: [
-    'rose',
-    'indigo',
-    'emerald',
-    'amber',
-  ][idx % 4],
-
-};
-      });
-      setUploadMessage("Updating dashboard...");
-      setNotifications(updatedNotifications);
-      setCurrentPage(1);
-      setRawData(jsonData);
-      setShowUploadDialog(false);
-      setSelectedFile(null);
-      setUploadLoading(false);
-      setUploadMessage("Dashboard updated successfully!");
-setTimeout(() => {
-  setUploadMessage("");
-}, 2500);
-    } catch (err) {
-      console.error(err);
-      setUploadLoading(false);
-      setUploadMessage("Error uploading file!");
-    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
   };
-  reader.readAsArrayBuffer(selectedFile);
-};
+  const processUploadedFile = () => {
+    if (!selectedFile) return;
+    setUploadLoading(true);
+    setUploadMessage("Uploading file...");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, {
+          type: 'array',
+        });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        setUploadMessage("Processing Excel data...");
+        const range = XLSX.utils.decode_range(
+          worksheet['!ref']
+        );
+
+        const visibleRows = [];
+
+        for (
+          let rowNum = range.s.r + 1;
+          rowNum <= range.e.r;
+          rowNum++
+        ) {
+
+          // Skip hidden rows
+          const rowInfo =
+            worksheet['!rows']?.[rowNum];
+
+          // Skip hidden OR filtered rows
+          if (
+            rowInfo &&
+            (
+              rowInfo.hidden === true ||
+              rowInfo.level !== undefined
+            )
+          ) {
+            continue;
+          }
+
+          const row = XLSX.utils.sheet_to_json(
+            worksheet,
+            {
+              range: rowNum,
+              header: 1,
+              defval: '',
+            }
+          )[0];
+
+          visibleRows.push(row);
+
+        }
+
+        const headers = XLSX.utils.sheet_to_json(
+          worksheet,
+          {
+            header: 1,
+            range: 0,
+          }
+        )[0];
+
+        const jsonData = visibleRows.map((row) => {
+
+          const obj = {};
+
+          headers.forEach((h, i) => {
+            obj[h] = row[i];
+          });
+
+          return obj;
+
+        });
+        if (!jsonData || jsonData.length === 0) {
+          throw new Error('Empty file');
+        }
+        const sample = jsonData[0] || {};
+
+        const notificationKey = findKey(sample, [
+          'Notification',
+          'Notification No',
+          'Notification Number',
+        ]);
+
+        const equipmentKey = findKey(sample, [
+          'Equipment',
+          'Equipment Name',
+          'Equip',
+        ]);
+
+        const statusKey = findKey(sample, [
+          'Status',
+          'User status',
+        ]);
+
+        const typeKey = findKey(sample, [
+          'Type',
+          'Notification Type',
+        ]);
+
+        const workCtrKey = findKey(sample, [
+          'Main WorkCtr',
+        ]);
+
+        const requiredEndKey = findKey(sample, [
+          'Required End',
+        ]);
+
+        const notifDateKey = findKey(sample, [
+          'Notif.date',
+        ]);
+
+        const priorityKey = findKey(sample, [
+          'Priority',
+        ]);
+        // KEEP YOUR EXISTING LOGIC SAME
+        const updatedNotifications = jsonData
+          .filter((row) => {
+
+            const notificationKey = findKey(row, [
+              'Notification',
+              'Notification No',
+              'Notification Number',
+            ]);
+
+            return row[notificationKey];
+
+          })
+          .map((row, idx) => {
+
+            return {
+
+              id:
+                row[notificationKey] ||
+                `N-${idx + 1}`,
+
+              equip:
+                row[equipmentKey] ||
+                'Unknown equipment',
+
+              status: (() => {
+
+                const rawStatus = String(
+                  row[statusKey] || ''
+                ).toUpperCase();
+
+                if (rawStatus.includes('APRD'))
+                  return 'Approved';
+
+                if (rawStatus.includes('APRE'))
+                  return 'Pending';
+
+                if (rawStatus.includes('NOPR'))
+                  return 'In Progress';
+
+                return rawStatus || 'Pending';
+
+              })(),
+
+              type:
+                row[typeKey] || 'N/A',
+
+              workCtr:
+                row[workCtrKey] || 'N/A',
+
+              requiredEnd:
+                row[requiredEndKey] || 'N/A',
+
+              notifDate:
+                row[notifDateKey] || 'N/A',
+
+              priority:
+                row[priorityKey] || 'Normal',
+
+              color: [
+                'rose',
+                'indigo',
+                'emerald',
+                'amber',
+              ][idx % 4],
+
+            };
+          });
+        setUploadMessage("Updating dashboard...");
+        setNotifications(updatedNotifications);
+        setCurrentPage(1);
+        setRawData(jsonData);
+        setShowUploadDialog(false);
+        setSelectedFile(null);
+        setUploadLoading(false);
+        setUploadMessage("Dashboard updated successfully!");
+        setTimeout(() => {
+          setUploadMessage("");
+        }, 2500);
+      } catch (err) {
+        console.error(err);
+        setUploadLoading(false);
+        setUploadMessage("Error uploading file!");
+      }
+    };
+    reader.readAsArrayBuffer(selectedFile);
+  };
   return (
     <Layout>
       {/* Breadcrumbs & Actions */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
-          <p className="mt-1 text-slate-500 font-medium">Real-time monitoring for Unit 4 • Steel Plant</p>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
+          <p className="mt-1 text-sm sm:text-base text-slate-500 font-medium">Real-time monitoring</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="min-w-[280px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+          <div className="w-full sm:w-[280px]">
 
-  <Select
-    isMulti
-    options={[
-      { value: 'M1', label: 'M1' },
-      { value: 'M2', label: 'M2' },
-      { value: 'M3', label: 'M3' },
-      { value: 'M4', label: 'M4' },
-      { value: 'M5', label: 'M5' },
-      { value: 'M6', label: 'M6' },
-      { value: 'M7', label: 'M7' },
-      { value: 'M8', label: 'M8' },
-      { value: 'M9', label: 'M9' },
-    ]}
+            <Select
+              isMulti
+              options={[
+                { value: 'M1', label: 'M1' },
+                { value: 'M2', label: 'M2' },
+                { value: 'M3', label: 'M3' },
+                { value: 'M4', label: 'M4' },
+                { value: 'M5', label: 'M5' },
+                { value: 'M6', label: 'M6' },
+                { value: 'M7', label: 'M7' },
+                { value: 'M8', label: 'M8' },
+                { value: 'M9', label: 'M9' },
+              ]}
 
-    value={activeTypeFilter}
+              value={activeTypeFilter}
 
-    onChange={(selected) => {
-      setActiveTypeFilter(selected || []);
-      setCurrentPage(1);
-    }}
+              onChange={(selected) => {
+                setActiveTypeFilter(selected || []);
+                setCurrentPage(1);
+              }}
 
-    placeholder="Filter notification types..."
+              placeholder="Filter notification types..."
 
-    className="text-sm"
+              className="text-sm"
 
-    styles={{
+              styles={{
 
-      control: (base) => ({
-        ...base,
-        minHeight: '46px',
-        borderRadius: '14px',
-        borderColor: '#e2e8f0',
-        boxShadow: 'none',
-        paddingLeft: '4px',
-      }),
+                control: (base) => ({
+                  ...base,
+                  minHeight: '46px',
+                  borderRadius: '14px',
+                  borderColor: '#e2e8f0',
+                  boxShadow: 'none',
+                  paddingLeft: '4px',
+                }),
 
-      multiValue: (base) => ({
-        ...base,
-        borderRadius: '10px',
-        backgroundColor: '#eef2ff',
-      }),
+                multiValue: (base) => ({
+                  ...base,
+                  borderRadius: '10px',
+                  backgroundColor: '#eef2ff',
+                }),
 
-      multiValueLabel: (base) => ({
-        ...base,
-        color: '#4f46e5',
-        fontWeight: 700,
-      }),
+                multiValueLabel: (base) => ({
+                  ...base,
+                  color: '#4f46e5',
+                  fontWeight: 700,
+                }),
 
-      option: (base, state) => ({
-        ...base,
-        backgroundColor: state.isSelected
-          ? '#4f46e5'
-          : state.isFocused
-          ? '#eef2ff'
-          : 'white',
-        color: state.isSelected
-          ? 'white'
-          : '#0f172a',
-      }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isSelected
+                    ? '#4f46e5'
+                    : state.isFocused
+                      ? '#eef2ff'
+                      : 'white',
+                  color: state.isSelected
+                    ? 'white'
+                    : '#0f172a',
+                }),
 
-    }}
-  />
+              }}
+            />
 
-</div>
+          </div>
           <button
             onClick={() => setShowUploadDialog(true)}
             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             Upload File
           </button>
         </div>
       </div>
       {rawData.length > 0 ? (
         <>
-      
-      {/* KPI Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {[     
-          {
-            label: 'Total Notifications',
-            value: stats.totalNotifications,
-            detail: 'Open / pending',
-            bgColor: 'bg-indigo-50',
-            textColor: 'text-indigo-600',
-            icon: '📊',
-            trend: '+2.6%'
-          },
-          {
-            label: 'Notif > 15 days',
-            value: stats.notif15Days,
-            detail: 'Older notifications',
-            bgColor: 'bg-purple-50',
-            textColor: 'text-purple-600',
-            icon: '⏱️',
-            trend: '-0.1%'
-          },
-          {
-            label: 'Units impacted',
-            value: stats.impactedUnits,
-            detail: 'Unique locations',
-            bgColor: 'bg-rose-50',
-            textColor: 'text-rose-600',
-            icon: '🏭',
-            trend: '+3.6%'
-          },
-          {
-            label: 'M2 Pending > 7 days',
-            value: stats.m2Pending,
-            detail: 'M2 overdue notifications',
-            bgColor: 'bg-orange-50',
-            textColor: 'text-orange-600',
-            icon: '🟧',
-            trend: '+1.8%'
-          },
-          {
-            label: 'M1 Pending > 25 days',
-            value: stats.m1Pending,
-            detail: 'M1 overdue notifications',
-            bgColor: 'bg-fuchsia-50',
-            textColor: 'text-fuchsia-600',
-            icon: '🟪',
-            trend: '+0.9%'
-          },
-        ].map((stat) => (
-          <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-xl bg-white/60 shadow-sm ${stat.textColor} text-xl`}>
-                {stat.icon}
+
+          {/* KPI Stats */}
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {[
+              {
+                label: 'Total Notifications',
+                value: stats.totalNotifications,
+                detail: 'Open / pending',
+                bgColor: 'bg-indigo-50',
+                textColor: 'text-indigo-600',
+                icon: '📊',
+                trend: '+2.6%'
+              },
+              {
+                label: 'Notif > 15 days',
+                value: stats.notif15Days,
+                detail: 'Older notifications',
+                bgColor: 'bg-purple-50',
+                textColor: 'text-purple-600',
+                icon: '⏱️',
+                trend: '-0.1%'
+              },
+              {
+                label: 'Units impacted',
+                value: stats.impactedUnits,
+                detail: 'Unique locations',
+                bgColor: 'bg-rose-50',
+                textColor: 'text-rose-600',
+                icon: '🏭',
+                trend: '+3.6%'
+              },
+              {
+                label: 'M2 Pending > 7 days',
+                value: stats.m2Pending,
+                detail: 'M2 overdue notifications',
+                bgColor: 'bg-orange-50',
+                textColor: 'text-orange-600',
+                icon: '🟧',
+                trend: '+1.8%'
+              },
+              {
+                label: 'M1 Pending > 25 days',
+                value: stats.m1Pending,
+                detail: 'M1 overdue notifications',
+                bgColor: 'bg-fuchsia-50',
+                textColor: 'text-fuchsia-600',
+                icon: '🟪',
+                trend: '+0.9%'
+              },
+            ].map((stat) => (
+              <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-2 rounded-xl bg-white/60 shadow-sm ${stat.textColor} text-xl`}>
+                    {stat.icon}
+                  </div>
+                  <span className={`text-sm font-bold ${stat.textColor}`}>
+                    {stat.trend} <svg className="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-slate-600">{stat.label}</p>
+                <div className="mt-1 flex items-end justify-between">
+                  <h3 className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</h3>
+                </div>
               </div>
-              <span className={`text-sm font-bold ${stat.textColor}`}>
-                {stat.trend} <svg className="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-              </span>
-            </div>
-            <p className="text-sm font-bold text-slate-600">{stat.label}</p>
-            <div className="mt-1 flex items-end justify-between">
-              <h3 className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</h3>
+            ))}
+          </div>
+          {/* Charts Grid */}
+          <div className="mt-8">
+            <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+              <NotificationTypeBarChart data={filteredRawData} />
             </div>
           </div>
-        ))}
-      </div>
-      {/* Charts Grid */}
-      <div className="mt-8">
-        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <NotificationTypeBarChart data={filteredRawData} />
-        </div>
-      </div>
 
-      {/* Static and Rotary Unit-wise Charts */}
-      <div className="mt-8 grid gap-8 grid-cols-1">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
-        </div>
-      </div>
-      
-{/* Total Due Notifications Chart */}
+          {/* Static and Rotary Unit-wise Charts */}
+          <div className="mt-8 grid gap-8 grid-cols-1">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+              <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+              <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
+            </div>
+          </div>
 
-<div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          {/* Total Due Notifications Chart */}
 
-  <div className="mb-6">
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
 
-    <h3 className="text-xl font-bold text-slate-900">
-      Total Due Notifications
-    </h3>
+            <div className="mb-6">
 
-    <p className="text-sm text-slate-500">
-      MR vs MS notification comparison by unit
-    </p>
-  </div>
-<>
-  <div className="h-[470px] overflow-x-auto">
+              <h3 className="text-xl font-bold text-slate-900">
+                Total Due Notifications
+              </h3>
 
-    <ResponsiveContainer
-      width="100%"
-      height="100%"
-    >
+              <p className="text-sm text-slate-500">
+                MR vs MS notification comparison by unit
+              </p>
+            </div>
+            <>
+              <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
 
-      <BarChart
-        data={dueChartData}
-        margin={{
-          top: 10,
-          right: 30,
-          left: 20,
-          bottom: 60,
-        }}
-        barCategoryGap={18}
-      >
+                <div className="min-w-[600px] h-[400px] sm:h-[470px]">
 
-        <CartesianGrid
-          strokeDasharray="3 3"
-          horizontal={false}
-          vertical={true}
-          stroke="#e2e8f0"
-        />
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                  >
 
-       <XAxis
-  dataKey="unit"
-  axisLine={false}
-  tickLine={false}
-  interval={0}
-  tick={({ x, y, payload }) => (
+                    <BarChart
+                      data={dueChartData}
+                      margin={{
+                        top: 10,
+                        right: 30,
+                        left: 20,
+                        bottom: 60,
+                      }}
+                      barCategoryGap={18}
+                    >
 
-    <g transform={`translate(${x},${y})`}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        horizontal={false}
+                        vertical={true}
+                        stroke="#e2e8f0"
+                      />
 
-      {/* MR MS Row */}
+                      <XAxis
+                        dataKey="unit"
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        tick={({ x, y, payload }) => (
 
-      <text
-        x={18}
-        y={18}
-        textAnchor="middle"
-        fill="#f59e0b"
-        fontSize="11"
-        fontWeight="700"
-      >
-        MR
-      </text>
-      <text
-        x={-18}
-        y={18}
-        textAnchor="middle"
-        fill="#2563eb"
-        fontSize="11"
-        fontWeight="700"
-      >
-        MS
-      </text>
+                          <g transform={`translate(${x},${y})`}>
 
-      {/* UNIT NAME */}
+                            {/* MR MS Row */}
 
-      <text
-        x={0}
-        y={38}
-        textAnchor="middle"
-        fill="#334155"
-        fontSize="13"
-        fontWeight="700"
-      >
-        {payload.value}
-      </text>
+                            <text
+                              x={18}
+                              y={18}
+                              textAnchor="middle"
+                              fill="#f59e0b"
+                              fontSize="11"
+                              fontWeight="700"
+                            >
+                              MR
+                            </text>
+                            <text
+                              x={-18}
+                              y={18}
+                              textAnchor="middle"
+                              fill="#2563eb"
+                              fontSize="11"
+                              fontWeight="700"
+                            >
+                              MS
+                            </text>
 
-    </g>
+                            {/* UNIT NAME */}
 
-  )}
-/>
-        <YAxis
-          type="number"
-          axisLine={false}
-          tickLine={false}
-          tick={{
-            fill: '#64748b',
-            fontSize: 12,
-          }}
-        />
+                            <text
+                              x={0}
+                              y={38}
+                              textAnchor="middle"
+                              fill="#334155"
+                              fontSize="13"
+                              fontWeight="700"
+                            >
+                              {payload.value}
+                            </text>
 
-        <Tooltip
-          cursor={{
-            fill: 'rgba(99,102,241,0.06)',
-          }}
-          contentStyle={{
-            borderRadius: '14px',
-            border: '1px solid #e2e8f0',
-          }}
-        />
-         <Bar
-          dataKey="MR"
-          fill="#f59e0b"
-          radius={[10, 10, 0, 0]}
-          barSize={28}
-        />
+                          </g>
 
-       <Bar
-          dataKey="MS"
-          fill="#2563eb"
-          radius={[10, 10, 0, 0]}
-          barSize={28}
-        />
+                        )}
+                      />
+                      <YAxis
+                        type="number"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: '#64748b',
+                          fontSize: 12,
+                        }}
+                      />
 
-      </BarChart>
+                      <Tooltip
+                        cursor={{
+                          fill: 'rgba(99,102,241,0.06)',
+                        }}
+                        contentStyle={{
+                          borderRadius: '14px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      />
+                      <Bar
+                        dataKey="MR"
+                        fill="#f59e0b"
+                        radius={[10, 10, 0, 0]}
+                        barSize={28}
+                      />
 
-    </ResponsiveContainer>
+                      <Bar
+                        dataKey="MS"
+                        fill="#2563eb"
+                        radius={[10, 10, 0, 0]}
+                        barSize={28}
+                      />
 
-  </div>
-  </>
+                    </BarChart>
 
-</div>
-      {/* Main Content Grid */}
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
-      </div>
-</>
-     ) : (
-      <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
-  {/* Icon */}
-  <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
-    📊
-  </div>
-  {/* Heading */}
-  <h2 className="text-3xl font-bold text-slate-900">
-    No Analytics Available
-  </h2>
-  {/* Description */}
-  <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-800">
-    Upload an Excel file to start analytics,
-    generate KPIs, visualize charts,
-    and monitor machine notifications.
-  </p>
-  {/* Upload Button */}
-  <button
-    onClick={() => setShowUploadDialog(true)}
-    className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-  >
-    Upload Excel File
-  </button>
-  {/* Features */}
-  <div className="mt-10 grid gap-4 text-sm text-slate-400 sm:grid-cols-3">
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
-      📈 KPI Metrics
-    </div>
+                  </ResponsiveContainer>
 
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
-      📊 Charts & Analytics
-    </div>
+                </div>
+              </div>
+            </>
 
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
-      🔔 Notification Tables
-    </div>
-  </div>
-</div>
-)  
-}
-{selectedNotification && (
-
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-
-    <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl">
-
-      {/* Header */}
-
-      <div className="mb-6 flex items-center justify-between">
-
-        <div>
-
-          <h2 className="text-2xl font-bold text-slate-900">
-            Notification Details
+          </div>
+          {/* Main Content Grid */}
+          <div className="mt-8 grid gap-8 lg:grid-cols-3">
+          </div>
+        </>
+      ) : (
+        <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
+          {/* Icon */}
+          <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
+            📊
+          </div>
+          {/* Heading */}
+          <h2 className="text-3xl font-bold text-slate-900">
+            No Analytics Available
           </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Detailed information about selected notification
+          {/* Description */}
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-800">
+            Upload an Excel file to start analytics,
+            generate KPIs, visualize charts,
+            and monitor machine notifications.
           </p>
+          {/* Upload Button */}
+          <button
+            onClick={() => setShowUploadDialog(true)}
+            className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+          >
+            Upload Excel File
+          </button>
+          {/* Features */}
+          <div className="mt-10 grid gap-4 text-sm text-slate-400 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+              📈 KPI Metrics
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+              📊 Charts & Analytics
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4">
+              🔔 Notification Tables
+            </div>
+          </div>
+        </div>
+      )
+      }
+      {selectedNotification && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+
+          <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl">
+
+            {/* Header */}
+
+            <div className="mb-6 flex items-center justify-between">
+
+              <div>
+
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Notification Details
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Detailed information about selected notification
+                </p>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  setSelectedNotification(null)
+                }
+                className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            {/* Content */}
+
+            <div className="grid gap-5 sm:grid-cols-2">
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Notification ID
+                </p>
+
+                <p className="mt-2 text-lg font-bold text-slate-900">
+                  {selectedNotification.id}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Equipment
+                </p>
+
+                <p className="mt-2 text-lg font-bold text-slate-900">
+                  {selectedNotification.equip}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Status
+                </p>
+
+                <p className="mt-2 text-lg font-bold text-slate-900">
+                  {selectedNotification.status}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Priority
+                </p>
+
+                <p className="mt-2 text-lg font-bold text-slate-900">
+                  {selectedNotification.priority}
+                </p>
+
+              </div>
+
+            </div>
+            <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+              <span className="text-sm font-bold text-slate-500">
+                Type
+              </span>
+
+              <span className="text-sm font-bold text-slate-900">
+                {selectedNotification.type}
+              </span>
+
+            </div>
+
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+              <span className="text-sm font-bold text-slate-500">
+                WorkCtr
+              </span>
+
+              <span className="text-sm font-bold text-slate-900">
+                {selectedNotification.workCtr}
+              </span>
+
+            </div>
+
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
+
+              <span className="text-sm font-bold text-slate-500">
+                Required End
+              </span>
+
+              <span className="text-sm font-bold text-slate-900">
+                {String(selectedNotification.requiredEnd)}
+              </span>
+
+            </div>
+
+            {/* Footer */}
+
+            <div className="mt-8 flex justify-end">
+
+              <button
+                onClick={() =>
+                  setSelectedNotification(null)
+                }
+                className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700"
+              >
+                Close
+              </button>
+
+            </div>
+
+          </div>
 
         </div>
 
-        <button
-          onClick={() =>
-            setSelectedNotification(null)
-          }
-          className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200"
-        >
-          ✕
-        </button>
-
-      </div>
-
-      {/* Content */}
-
-      <div className="grid gap-5 sm:grid-cols-2">
-
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Notification ID
-          </p>
-
-          <p className="mt-2 text-lg font-bold text-slate-900">
-            {selectedNotification.id}
-          </p>
-
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Equipment
-          </p>
-
-          <p className="mt-2 text-lg font-bold text-slate-900">
-            {selectedNotification.equip}
-          </p>
-
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Status
-          </p>
-
-          <p className="mt-2 text-lg font-bold text-slate-900">
-            {selectedNotification.status}
-          </p>
-
-        </div>
-
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Priority
-          </p>
-
-          <p className="mt-2 text-lg font-bold text-slate-900">
-           {selectedNotification.priority}
-          </p>
-
-        </div>
-
-      </div>
-      <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-
-  <span className="text-sm font-bold text-slate-500">
-    Type
-  </span>
-
-  <span className="text-sm font-bold text-slate-900">
-    {selectedNotification.type}
-  </span>
-
-</div>
-
-<div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-
-  <span className="text-sm font-bold text-slate-500">
-    WorkCtr
-  </span>
-
-  <span className="text-sm font-bold text-slate-900">
-    {selectedNotification.workCtr}
-  </span>
-
-</div>
-
-<div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
-
-  <span className="text-sm font-bold text-slate-500">
-    Required End
-  </span>
-
-  <span className="text-sm font-bold text-slate-900">
-    {String(selectedNotification.requiredEnd)}
-  </span>
-
-</div>
-
-      {/* Footer */}
-
-      <div className="mt-8 flex justify-end">
-
-        <button
-          onClick={() =>
-            setSelectedNotification(null)
-          }
-          className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700"
-        >
-          Close
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-)}
+      )}
       {/* Upload Dialog Modal */}
       {showUploadDialog && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-    <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold text-slate-900">
-          Upload Data File
-        </h3>
-        <p className="mt-2 text-sm text-slate-500">
-          Upload Excel file for dashboard analytics
-        </p>
-      </div>
-      {/* Upload Area */}
-      <div className="mb-5">
-        <div
-          onClick={() =>
-            fileInputRef.current?.click()
-          }
-          className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all"
-        >
-          <svg
-            className="mx-auto mb-3 h-12 w-12 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-          <p className="text-sm font-bold text-slate-900">
-            Click to upload or drag and drop
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Excel files (.xlsx, .xls)
-          </p>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-      </div>
-      {/* File Preview */}
-      {selectedFile && (
-        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">
-                📄
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {selectedFile.name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-slate-900">
+                Upload Data File
+              </h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Upload Excel file for dashboard analytics
+              </p>
             </div>
-            <button
-              onClick={() => setSelectedFile(null)}
-              className="text-sm font-bold text-rose-500 hover:text-rose-600"
-            >
-              Remove
-            </button>
+            {/* Upload Area */}
+            <div className="mb-5">
+              <div
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all"
+              >
+                <svg
+                  className="mx-auto mb-3 h-12 w-12 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                <p className="text-sm font-bold text-slate-900">
+                  Click to upload or drag and drop
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Excel files (.xlsx, .xls)
+                </p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+            {/* File Preview */}
+            {selectedFile && (
+              <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">
+                      📄
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {(selectedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    className="text-sm font-bold text-rose-500 hover:text-rose-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+            {uploadMessage && (
+              <div
+                className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${uploadLoading
+                    ? "bg-indigo-50 text-indigo-700"
+                    : uploadMessage.includes("success")
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-rose-50 text-rose-700"
+                  }`}
+              >
+                {uploadMessage}
+              </div>
+            )}
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                disabled={uploadLoading}
+                onClick={() => {
+                  if (!selectedFile) {
+                    fileInputRef.current?.click();
+                  } else {
+                    processUploadedFile();
+                  }
+                }}
+                className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
+              >
+                {uploadLoading
+                  ? "Processing..."
+                  : selectedFile
+                    ? "Upload to Dashboard"
+                    : "Select File"}
+              </button>
+              <button
+                onClick={() =>
+                  setShowUploadDialog(false)
+                }
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
-      {uploadMessage && (
-  <div
-    className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
-      uploadLoading
-        ? "bg-indigo-50 text-indigo-700"
-        : uploadMessage.includes("success")
-        ? "bg-emerald-50 text-emerald-700"
-        : "bg-rose-50 text-rose-700"
-    }`}
-  >
-    {uploadMessage}
-  </div>
-)}
-      {/* Buttons */}
-      <div className="flex gap-3">
-       <button
-       disabled={uploadLoading}
-          onClick={() => {
-            if (!selectedFile) {
-              fileInputRef.current?.click();
-            } else {
-              processUploadedFile();
-            }
-          }}
-          className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
-        >
-          {uploadLoading
-  ? "Processing..."
-  : selectedFile
-  ? "Upload to Dashboard"
-  : "Select File"}
-        </button>
-        <button
-          onClick={() =>
-            setShowUploadDialog(false)
-          }
-          className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
       <input
         ref={fileInputRef}
         type="file"
