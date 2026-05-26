@@ -749,7 +749,6 @@ setTimeout(() => {
             bgColor: 'bg-indigo-50',
             textColor: 'text-indigo-600',
             icon: '📊',
-            trend: '+2.6%'
           },
           {
             label: 'Notif > 15 days',
@@ -758,7 +757,6 @@ setTimeout(() => {
             bgColor: 'bg-purple-50',
             textColor: 'text-purple-600',
             icon: '⏱️',
-            trend: '-0.1%'
           },
           {
             label: 'Units impacted',
@@ -767,7 +765,6 @@ setTimeout(() => {
             bgColor: 'bg-rose-50',
             textColor: 'text-rose-600',
             icon: '🏭',
-            trend: '+3.6%'
           },
           {
             label: 'M2 Pending > 7 days',
@@ -776,7 +773,6 @@ setTimeout(() => {
             bgColor: 'bg-orange-50',
             textColor: 'text-orange-600',
             icon: '🟧',
-            trend: '+1.8%'
           },
           {
             label: 'M1 Pending > 25 days',
@@ -785,7 +781,6 @@ setTimeout(() => {
             bgColor: 'bg-fuchsia-50',
             textColor: 'text-fuchsia-600',
             icon: '🟪',
-            trend: '+0.9%'
           },
         ].map((stat) => (
           <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
