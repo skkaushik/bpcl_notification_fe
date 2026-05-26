@@ -455,188 +455,129 @@ const Dashboard = () => {
     if (!file) return;
     setSelectedFile(file);
   };
-  const processUploadedFile = () => {
+  const processUploadedFile = async () => {
     if (!selectedFile) return;
 
-    // Close upload dialog, open processing modal immediately
     setShowUploadDialog(false);
     setUploadLoading(true);
     setProcessingPercent(0);
     setUploadMessage("Reading file...");
 
-    // ── Smooth ticker: fills gaps between real stages so the bar never freezes.
-    // It is BOUNDED — it will never exceed `cap`, which we raise as each real
-    // stage completes. Parsing drives the cap; the ticker just animates up to it.
-    let displayPct = 0;
-    let cap = 12; // start by allowing the bar to reach 12% while FileReader loads
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 40));
 
-    const ticker = setInterval(() => {
-      if (displayPct < cap) {
-        // Ease toward cap with small, natural-feeling increments
-        const gap = cap - displayPct;
-        const step = Math.max(1, Math.floor(gap * 0.18));
-        displayPct = Math.min(cap, displayPct + step);
-        setProcessingPercent(displayPct);
-      }
-    }, 120);
+    try {
+      setProcessingPercent(10);
+      await yieldToMain();
 
-    const finishLoading = (parsedNotifications, parsedRawData) => {
-      clearInterval(ticker);
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(selectedFile);
+      });
 
-      // Animate from current position to 100% in small steps, then show dashboard
-      const finalSteps = [92, 95, 97, 99, 100];
-      let stepIdx = 0;
+      setUploadMessage("Parsing workbook...");
+      setProcessingPercent(30);
+      await yieldToMain();
 
-      const runFinalStep = () => {
-        if (stepIdx < finalSteps.length) {
-          setProcessingPercent(finalSteps[stepIdx]);
-          stepIdx++;
-          setTimeout(runFinalStep, 140);
-        } else {
-          // 100% reached — apply data and close modal immediately
-          setNotifications(parsedNotifications);
-          setCurrentPage(1);
-          setRawData(parsedRawData);
-          setSelectedFile(null);
-          setUploadMessage("Dashboard ready!");
-          setTimeout(() => {
-            setUploadLoading(false);
-            setProcessingPercent(0);
-            setUploadMessage("");
-          }, 400);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      setUploadMessage("Extracting rows...");
+      setProcessingPercent(50);
+      await yieldToMain();
+
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      const allRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', blankrows: true });
+      const headers = allRows[0] || [];
+      const visibleRows = [];
+
+      for (let i = 1; i < allRows.length; i++) {
+        const rowNum = range.s.r + i;
+        const rowInfo = worksheet['!rows']?.[rowNum];
+        if (rowInfo && (rowInfo.hidden === true || rowInfo.level !== undefined)) {
+          continue;
         }
-      };
-      runFinalStep();
-    };
+        visibleRows.push(allRows[i]);
+      }
 
-    const failLoading = (err) => {
-      clearInterval(ticker);
+      setUploadMessage("Mapping columns...");
+      setProcessingPercent(70);
+      await yieldToMain();
+
+      const jsonData = visibleRows.map((row) => {
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = row[idx]; });
+        return obj;
+      });
+
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('File appears to be empty');
+      }
+
+      const sample = jsonData[0] || {};
+      const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
+      const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
+      const statusKey = findKey(sample, ['Status', 'User status']);
+      const typeKey = findKey(sample, ['Type', 'Notification Type']);
+      const workCtrKey = findKey(sample, ['Main WorkCtr']);
+      const requiredEndKey = findKey(sample, ['Required End']);
+      const notifDateKey = findKey(sample, ['Notif.date']);
+      const priorityKey = findKey(sample, ['Priority']);
+
+      setUploadMessage("Building analytics...");
+      setProcessingPercent(90);
+      await yieldToMain();
+
+      const updatedNotifications = jsonData
+        .filter((row) => {
+          const nk = findKey(row, ['Notification', 'Notification No', 'Notification Number']);
+          return row[nk];
+        })
+        .map((row, idx) => ({
+          id: row[notificationKey] || `N-${idx + 1}`,
+          equip: row[equipmentKey] || 'Unknown equipment',
+          status: (() => {
+            const raw = String(row[statusKey] || '').toUpperCase();
+            if (raw.includes('APRD')) return 'Approved';
+            if (raw.includes('APRE')) return 'Pending';
+            if (raw.includes('NOPR')) return 'In Progress';
+            return raw || 'Pending';
+          })(),
+          type: row[typeKey] || 'N/A',
+          workCtr: row[workCtrKey] || 'N/A',
+          requiredEnd: row[requiredEndKey] || 'N/A',
+          notifDate: row[notifDateKey] || 'N/A',
+          priority: row[priorityKey] || 'Normal',
+          color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
+        }));
+
+      setProcessingPercent(100);
+      setUploadMessage("Dashboard ready!");
+      await yieldToMain();
+
+      setNotifications(updatedNotifications);
+      setCurrentPage(1);
+      setRawData(jsonData);
+      setSelectedFile(null);
+      
+      setTimeout(() => {
+        setUploadLoading(false);
+        setProcessingPercent(0);
+        setUploadMessage("");
+      }, 400);
+
+    } catch (err) {
       console.error(err);
       setUploadMessage("Error: " + err.message);
+      await yieldToMain();
       setTimeout(() => {
         setUploadLoading(false);
         setProcessingPercent(0);
         setUploadMessage("");
       }, 3000);
-    };
-
-    // ── Real async parsing pipeline ──────────────────────────────────────────
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      // Stage 1 complete: file bytes in memory → allow bar to 28%
-      cap = 28;
-      setUploadMessage("Parsing workbook...");
-
-      // Yield to browser paint, then parse (XLSX.read is synchronous)
-      setTimeout(() => {
-        try {
-          const data = event.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-
-          // Stage 2 complete: workbook parsed → allow bar to 48%
-          cap = 48;
-          setUploadMessage("Extracting rows...");
-
-          // Yield again before iterating rows
-          setTimeout(() => {
-            try {
-              const range = XLSX.utils.decode_range(worksheet['!ref']);
-              const visibleRows = [];
-
-              for (let rowNum = range.s.r + 1; rowNum <= range.e.r; rowNum++) {
-                const rowInfo = worksheet['!rows']?.[rowNum];
-                if (rowInfo && (rowInfo.hidden === true || rowInfo.level !== undefined)) {
-                  continue;
-                }
-                const row = XLSX.utils.sheet_to_json(worksheet, {
-                  range: rowNum,
-                  header: 1,
-                  defval: '',
-                })[0];
-                visibleRows.push(row);
-              }
-
-              const headers = XLSX.utils.sheet_to_json(worksheet, {
-                header: 1,
-                range: 0,
-              })[0];
-
-              // Stage 3 complete: rows extracted → allow bar to 70%
-              cap = 70;
-              setUploadMessage("Mapping columns...");
-
-              setTimeout(() => {
-                try {
-                  const jsonData = visibleRows.map((row) => {
-                    const obj = {};
-                    headers.forEach((h, i) => { obj[h] = row[i]; });
-                    return obj;
-                  });
-
-                  if (!jsonData || jsonData.length === 0) {
-                    throw new Error('File appears to be empty');
-                  }
-
-                  const sample = jsonData[0] || {};
-                  const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
-                  const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
-                  const statusKey = findKey(sample, ['Status', 'User status']);
-                  const typeKey = findKey(sample, ['Type', 'Notification Type']);
-                  const workCtrKey = findKey(sample, ['Main WorkCtr']);
-                  const requiredEndKey = findKey(sample, ['Required End']);
-                  const notifDateKey = findKey(sample, ['Notif.date']);
-                  const priorityKey = findKey(sample, ['Priority']);
-
-                  // Stage 4 complete: column keys resolved → allow bar to 88%
-                  cap = 88;
-                  setUploadMessage("Building analytics...");
-
-                  setTimeout(() => {
-                    try {
-                      const updatedNotifications = jsonData
-                        .filter((row) => {
-                          const nk = findKey(row, ['Notification', 'Notification No', 'Notification Number']);
-                          return row[nk];
-                        })
-                        .map((row, idx) => ({
-                          id: row[notificationKey] || `N-${idx + 1}`,
-                          equip: row[equipmentKey] || 'Unknown equipment',
-                          status: (() => {
-                            const raw = String(row[statusKey] || '').toUpperCase();
-                            if (raw.includes('APRD')) return 'Approved';
-                            if (raw.includes('APRE')) return 'Pending';
-                            if (raw.includes('NOPR')) return 'In Progress';
-                            return raw || 'Pending';
-                          })(),
-                          type: row[typeKey] || 'N/A',
-                          workCtr: row[workCtrKey] || 'N/A',
-                          requiredEnd: row[requiredEndKey] || 'N/A',
-                          notifDate: row[notifDateKey] || 'N/A',
-                          priority: row[priorityKey] || 'Normal',
-                          color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
-                        }));
-
-                      // All real work done → animate to 100% then show dashboard
-                      finishLoading(updatedNotifications, jsonData);
-
-                    } catch (err) { failLoading(err); }
-                  }, 80);
-
-                } catch (err) { failLoading(err); }
-              }, 80);
-
-            } catch (err) { failLoading(err); }
-          }, 80);
-
-        } catch (err) { failLoading(err); }
-      }, 60);
-    };
-
-    reader.onerror = () => failLoading(new Error('Failed to read file'));
-    reader.readAsArrayBuffer(selectedFile);
+    }
   };
   return (
     <Layout>
