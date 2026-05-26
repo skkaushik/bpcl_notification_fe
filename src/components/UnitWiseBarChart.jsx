@@ -97,31 +97,33 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
           No {prefix} data available
         </div>
       ) : (
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="label" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={<CustomTick />} 
-                interval={0} // Show all ticks
-              />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} width={40} />
-              <Tooltip 
-                cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
-                formatter={(value, name, props) => [value, `Notifications (${props.payload.type})`]}
-                labelFormatter={(label) => label.split('-')[0]}
-              />
-              <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                <LabelList dataKey="count" position="top" fill="#0f172a" fontSize={11} fontWeight={700} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="min-w-[600px] h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="label" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={<CustomTick />} 
+                  interval={0} // Show all ticks
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} width={40} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
+                  formatter={(value, name, props) => [value, `Notifications (${props.payload.type})`]}
+                  labelFormatter={(label) => label.split('-')[0]}
+                />
+                <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                  <LabelList dataKey="count" position="top" fill="#0f172a" fontSize={11} fontWeight={700} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
     </div>
