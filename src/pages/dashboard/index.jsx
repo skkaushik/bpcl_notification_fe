@@ -338,6 +338,7 @@ const Dashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [processingPercent, setProcessingPercent] = useState(0);
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
@@ -456,204 +457,185 @@ const Dashboard = () => {
   };
   const processUploadedFile = () => {
     if (!selectedFile) return;
+
+    // Close upload dialog, open processing modal immediately
+    setShowUploadDialog(false);
     setUploadLoading(true);
-    setUploadMessage("Uploading file...");
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, {
-          type: 'array',
-        });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        setUploadMessage("Processing Excel data...");
-        const range = XLSX.utils.decode_range(
-          worksheet['!ref']
-        );
+    setProcessingPercent(0);
+    setUploadMessage("Reading file...");
 
-        const visibleRows = [];
+    // ── Smooth ticker: fills gaps between real stages so the bar never freezes.
+    // It is BOUNDED — it will never exceed `cap`, which we raise as each real
+    // stage completes. Parsing drives the cap; the ticker just animates up to it.
+    let displayPct = 0;
+    let cap = 12; // start by allowing the bar to reach 12% while FileReader loads
 
-        for (
-          let rowNum = range.s.r + 1;
-          rowNum <= range.e.r;
-          rowNum++
-        ) {
-
-          // Skip hidden rows
-          const rowInfo =
-            worksheet['!rows']?.[rowNum];
-
-          // Skip hidden OR filtered rows
-          if (
-            rowInfo &&
-            (
-              rowInfo.hidden === true ||
-              rowInfo.level !== undefined
-            )
-          ) {
-            continue;
-          }
-
-          const row = XLSX.utils.sheet_to_json(
-            worksheet,
-            {
-              range: rowNum,
-              header: 1,
-              defval: '',
-            }
-          )[0];
-
-          visibleRows.push(row);
-
-        }
-
-        const headers = XLSX.utils.sheet_to_json(
-          worksheet,
-          {
-            header: 1,
-            range: 0,
-          }
-        )[0];
-
-        const jsonData = visibleRows.map((row) => {
-
-          const obj = {};
-
-          headers.forEach((h, i) => {
-            obj[h] = row[i];
-          });
-
-          return obj;
-
-        });
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error('Empty file');
-        }
-        const sample = jsonData[0] || {};
-
-        const notificationKey = findKey(sample, [
-          'Notification',
-          'Notification No',
-          'Notification Number',
-        ]);
-
-        const equipmentKey = findKey(sample, [
-          'Equipment',
-          'Equipment Name',
-          'Equip',
-        ]);
-
-        const statusKey = findKey(sample, [
-          'Status',
-          'User status',
-        ]);
-
-        const typeKey = findKey(sample, [
-          'Type',
-          'Notification Type',
-        ]);
-
-        const workCtrKey = findKey(sample, [
-          'Main WorkCtr',
-        ]);
-
-        const requiredEndKey = findKey(sample, [
-          'Required End',
-        ]);
-
-        const notifDateKey = findKey(sample, [
-          'Notif.date',
-        ]);
-
-        const priorityKey = findKey(sample, [
-          'Priority',
-        ]);
-        // KEEP YOUR EXISTING LOGIC SAME
-        const updatedNotifications = jsonData
-          .filter((row) => {
-
-            const notificationKey = findKey(row, [
-              'Notification',
-              'Notification No',
-              'Notification Number',
-            ]);
-
-            return row[notificationKey];
-
-          })
-          .map((row, idx) => {
-
-            return {
-
-              id:
-                row[notificationKey] ||
-                `N-${idx + 1}`,
-
-              equip:
-                row[equipmentKey] ||
-                'Unknown equipment',
-
-              status: (() => {
-
-                const rawStatus = String(
-                  row[statusKey] || ''
-                ).toUpperCase();
-
-                if (rawStatus.includes('APRD'))
-                  return 'Approved';
-
-                if (rawStatus.includes('APRE'))
-                  return 'Pending';
-
-                if (rawStatus.includes('NOPR'))
-                  return 'In Progress';
-
-                return rawStatus || 'Pending';
-
-              })(),
-
-              type:
-                row[typeKey] || 'N/A',
-
-              workCtr:
-                row[workCtrKey] || 'N/A',
-
-              requiredEnd:
-                row[requiredEndKey] || 'N/A',
-
-              notifDate:
-                row[notifDateKey] || 'N/A',
-
-              priority:
-                row[priorityKey] || 'Normal',
-
-              color: [
-                'rose',
-                'indigo',
-                'emerald',
-                'amber',
-              ][idx % 4],
-
-            };
-          });
-        setUploadMessage("Updating dashboard...");
-        setNotifications(updatedNotifications);
-        setCurrentPage(1);
-        setRawData(jsonData);
-        setShowUploadDialog(false);
-        setSelectedFile(null);
-        setUploadLoading(false);
-        setUploadMessage("Dashboard updated successfully!");
-        setTimeout(() => {
-          setUploadMessage("");
-        }, 2500);
-      } catch (err) {
-        console.error(err);
-        setUploadLoading(false);
-        setUploadMessage("Error uploading file!");
+    const ticker = setInterval(() => {
+      if (displayPct < cap) {
+        // Ease toward cap with small, natural-feeling increments
+        const gap = cap - displayPct;
+        const step = Math.max(1, Math.floor(gap * 0.18));
+        displayPct = Math.min(cap, displayPct + step);
+        setProcessingPercent(displayPct);
       }
+    }, 120);
+
+    const finishLoading = (parsedNotifications, parsedRawData) => {
+      clearInterval(ticker);
+
+      // Animate from current position to 100% in small steps, then show dashboard
+      const finalSteps = [92, 95, 97, 99, 100];
+      let stepIdx = 0;
+
+      const runFinalStep = () => {
+        if (stepIdx < finalSteps.length) {
+          setProcessingPercent(finalSteps[stepIdx]);
+          stepIdx++;
+          setTimeout(runFinalStep, 140);
+        } else {
+          // 100% reached — apply data and close modal immediately
+          setNotifications(parsedNotifications);
+          setCurrentPage(1);
+          setRawData(parsedRawData);
+          setSelectedFile(null);
+          setUploadMessage("Dashboard ready!");
+          setTimeout(() => {
+            setUploadLoading(false);
+            setProcessingPercent(0);
+            setUploadMessage("");
+          }, 400);
+        }
+      };
+      runFinalStep();
     };
+
+    const failLoading = (err) => {
+      clearInterval(ticker);
+      console.error(err);
+      setUploadMessage("Error: " + err.message);
+      setTimeout(() => {
+        setUploadLoading(false);
+        setProcessingPercent(0);
+        setUploadMessage("");
+      }, 3000);
+    };
+
+    // ── Real async parsing pipeline ──────────────────────────────────────────
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      // Stage 1 complete: file bytes in memory → allow bar to 28%
+      cap = 28;
+      setUploadMessage("Parsing workbook...");
+
+      // Yield to browser paint, then parse (XLSX.read is synchronous)
+      setTimeout(() => {
+        try {
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+
+          // Stage 2 complete: workbook parsed → allow bar to 48%
+          cap = 48;
+          setUploadMessage("Extracting rows...");
+
+          // Yield again before iterating rows
+          setTimeout(() => {
+            try {
+              const range = XLSX.utils.decode_range(worksheet['!ref']);
+              const visibleRows = [];
+
+              for (let rowNum = range.s.r + 1; rowNum <= range.e.r; rowNum++) {
+                const rowInfo = worksheet['!rows']?.[rowNum];
+                if (rowInfo && (rowInfo.hidden === true || rowInfo.level !== undefined)) {
+                  continue;
+                }
+                const row = XLSX.utils.sheet_to_json(worksheet, {
+                  range: rowNum,
+                  header: 1,
+                  defval: '',
+                })[0];
+                visibleRows.push(row);
+              }
+
+              const headers = XLSX.utils.sheet_to_json(worksheet, {
+                header: 1,
+                range: 0,
+              })[0];
+
+              // Stage 3 complete: rows extracted → allow bar to 70%
+              cap = 70;
+              setUploadMessage("Mapping columns...");
+
+              setTimeout(() => {
+                try {
+                  const jsonData = visibleRows.map((row) => {
+                    const obj = {};
+                    headers.forEach((h, i) => { obj[h] = row[i]; });
+                    return obj;
+                  });
+
+                  if (!jsonData || jsonData.length === 0) {
+                    throw new Error('File appears to be empty');
+                  }
+
+                  const sample = jsonData[0] || {};
+                  const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
+                  const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
+                  const statusKey = findKey(sample, ['Status', 'User status']);
+                  const typeKey = findKey(sample, ['Type', 'Notification Type']);
+                  const workCtrKey = findKey(sample, ['Main WorkCtr']);
+                  const requiredEndKey = findKey(sample, ['Required End']);
+                  const notifDateKey = findKey(sample, ['Notif.date']);
+                  const priorityKey = findKey(sample, ['Priority']);
+
+                  // Stage 4 complete: column keys resolved → allow bar to 88%
+                  cap = 88;
+                  setUploadMessage("Building analytics...");
+
+                  setTimeout(() => {
+                    try {
+                      const updatedNotifications = jsonData
+                        .filter((row) => {
+                          const nk = findKey(row, ['Notification', 'Notification No', 'Notification Number']);
+                          return row[nk];
+                        })
+                        .map((row, idx) => ({
+                          id: row[notificationKey] || `N-${idx + 1}`,
+                          equip: row[equipmentKey] || 'Unknown equipment',
+                          status: (() => {
+                            const raw = String(row[statusKey] || '').toUpperCase();
+                            if (raw.includes('APRD')) return 'Approved';
+                            if (raw.includes('APRE')) return 'Pending';
+                            if (raw.includes('NOPR')) return 'In Progress';
+                            return raw || 'Pending';
+                          })(),
+                          type: row[typeKey] || 'N/A',
+                          workCtr: row[workCtrKey] || 'N/A',
+                          requiredEnd: row[requiredEndKey] || 'N/A',
+                          notifDate: row[notifDateKey] || 'N/A',
+                          priority: row[priorityKey] || 'Normal',
+                          color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
+                        }));
+
+                      // All real work done → animate to 100% then show dashboard
+                      finishLoading(updatedNotifications, jsonData);
+
+                    } catch (err) { failLoading(err); }
+                  }, 80);
+
+                } catch (err) { failLoading(err); }
+              }, 80);
+
+            } catch (err) { failLoading(err); }
+          }, 80);
+
+        } catch (err) { failLoading(err); }
+      }, 60);
+    };
+
+    reader.onerror = () => failLoading(new Error('Failed to read file'));
     reader.readAsArrayBuffer(selectedFile);
   };
   return (
@@ -740,6 +722,46 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
+      {uploadLoading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl text-center">
+            {/* Loader */}
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-indigo-50 text-5xl">
+              📊
+            </div>
+
+            {/* Heading */}
+            <h2 className="text-2xl font-bold text-slate-900">
+              Processing File
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Please wait while analytics are being generated...
+            </p>
+
+            {/* Progress Bar */}
+            <div className="mt-8">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700">
+                  Processing
+                </span>
+                <span className="text-sm font-bold text-indigo-600">
+                  {processingPercent}%
+                </span>
+              </div>
+
+              <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                  style={{
+                    width: `${processingPercent}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {rawData.length > 0 ? (
         <>
 
@@ -789,13 +811,13 @@ const Dashboard = () => {
             ].map((stat) => (
               <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
                 <div className="absolute top-4 right-4">
-                <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-xl bg-white/70 shadow-sm ${stat.textColor} text-lg`}
-                >
-                  {stat.icon}
+                  <div
+                    className={`flex h-6 w-6 items-center justify-center rounded-xl bg-white/70 shadow-sm ${stat.textColor} text-lg`}
+                  >
+                    {stat.icon}
+                  </div>
                 </div>
-              </div>
-                  <p className="text-sm font-bold text-slate-600">{stat.label}</p>
+                <p className="text-sm font-bold text-slate-600">{stat.label}</p>
                 <div className="mt-1 flex items-end justify-between">
                   <h3 className={`text-3xl font-bold ${stat.textColor}`}>{stat.value}</h3>
                 </div>
@@ -1212,18 +1234,6 @@ const Dashboard = () => {
                 </div>
               </div>
             )}
-            {uploadMessage && (
-              <div
-                className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${uploadLoading
-                    ? "bg-indigo-50 text-indigo-700"
-                    : uploadMessage.includes("success")
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-rose-50 text-rose-700"
-                  }`}
-              >
-                {uploadMessage}
-              </div>
-            )}
             {/* Buttons */}
             <div className="flex gap-3">
               <button
@@ -1238,9 +1248,9 @@ const Dashboard = () => {
                 className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
               >
                 {uploadLoading
-                  ? "Processing..."
+                  ? "Processing File..."
                   : selectedFile
-                    ? "Upload to Dashboard"
+                    ? "Process File"
                     : "Select File"}
               </button>
               <button
