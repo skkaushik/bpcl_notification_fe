@@ -6,12 +6,28 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid, 
-   LabelList,
+  CartesianGrid,
+  LabelList,
 } from 'recharts';
 
 const normalizeKey = (key = '') =>
   String(key).replace(/\s+/g, '').toLowerCase();
+
+const findKey = (row = {}, targets = []) => {
+  const keyMap = Object.keys(row).reduce(
+    (map, key) => {
+      map[normalizeKey(key)] = key;
+      return map;
+    },
+    {}
+  );
+  for (const t of targets) {
+    const found =
+      keyMap[normalizeKey(t)];
+    if (found) return found;
+  }
+  return undefined;
+};
 
 const findNotificationTypeKey = (row = {}) => {
   const keys = Object.keys(row);
@@ -68,7 +84,7 @@ const buildChartData = (data) => {
 
   // Detect actual Excel columns
   const typeKey = findNotificationTypeKey(data[0]);
-  
+
   const keys = Object.keys(data[0]);
   const notifTargets = ['notification', 'notificationno', 'notificationnumber', 'notifictn'];
   const notifKey = keys.find((key) => {
@@ -86,12 +102,30 @@ const buildChartData = (data) => {
       value: 0,
     }));
   }
+  const unitKey = findKey(data[0], [
+    'Main WorkCtr',
+    'MainWorkCtr',
+    'Unit',
+  ]);
 
   // Count unique Notification IDs per M1-M9 value
   data.forEach((row) => {
     const rawType = String(row[typeKey] ?? '').trim().toUpperCase();
     const normalizedType = rawType.replace(/\s+/g, '');
     const notifId = String(row[notifKey] ?? '').trim();
+    const rawUnit = String(
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
+
+    // ONLY MR and MS
+    if (
+      !rawUnit.startsWith('MR') &&
+      !rawUnit.startsWith('MS')
+    ) {
+      return;
+    }
 
     if (defaultTypes.includes(normalizedType) && notifId) {
       notificationSets[normalizedType].add(notifId);
@@ -199,7 +233,8 @@ const NotificationTypeBarChart = ({ data = [] }) => {
               <Bar
                 dataKey="value"
                 fill="url(#notificationBarGradient)"
-                radius={[12, 12, 0, 0]}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={40}
                 animationDuration={800}
               >
                 <LabelList

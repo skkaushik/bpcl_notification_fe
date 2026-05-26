@@ -13,6 +13,8 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+
+
 const normalizeKey = (key = "") => String(key).replace(/\s+/g, "").toLowerCase();
 const findKey = (row = {}, targets = []) => {
   const keyMap = Object.keys(row).reduce((map, key) => {
@@ -327,6 +329,8 @@ const buildDueChartData = (data = []) => {
   return Object.values(groupedData);
 
 };
+
+
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -334,6 +338,7 @@ const Dashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [processingPercent, setProcessingPercent] = useState(0);
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
@@ -450,207 +455,129 @@ const Dashboard = () => {
     if (!file) return;
     setSelectedFile(file);
   };
-  const processUploadedFile = () => {
+  const processUploadedFile = async () => {
     if (!selectedFile) return;
+
+    setShowUploadDialog(false);
     setUploadLoading(true);
-    setUploadMessage("Uploading file...");
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, {
-          type: 'array',
-        });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        setUploadMessage("Processing Excel data...");
-        const range = XLSX.utils.decode_range(
-          worksheet['!ref']
-        );
+    setProcessingPercent(0);
+    setUploadMessage("Reading file...");
 
-        const visibleRows = [];
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 40));
 
-        for (
-          let rowNum = range.s.r + 1;
-          rowNum <= range.e.r;
-          rowNum++
-        ) {
+    try {
+      setProcessingPercent(10);
+      await yieldToMain();
 
-          // Skip hidden rows
-          const rowInfo =
-            worksheet['!rows']?.[rowNum];
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(selectedFile);
+      });
 
-          // Skip hidden OR filtered rows
-          if (
-            rowInfo &&
-            (
-              rowInfo.hidden === true ||
-              rowInfo.level !== undefined
-            )
-          ) {
-            continue;
-          }
+      setUploadMessage("Parsing workbook...");
+      setProcessingPercent(30);
+      await yieldToMain();
 
-          const row = XLSX.utils.sheet_to_json(
-            worksheet,
-            {
-              range: rowNum,
-              header: 1,
-              defval: '',
-            }
-          )[0];
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
 
-          visibleRows.push(row);
+      setUploadMessage("Extracting rows...");
+      setProcessingPercent(50);
+      await yieldToMain();
 
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      const allRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', blankrows: true });
+      const headers = allRows[0] || [];
+      const visibleRows = [];
+
+      for (let i = 1; i < allRows.length; i++) {
+        const rowNum = range.s.r + i;
+        const rowInfo = worksheet['!rows']?.[rowNum];
+        if (rowInfo && (rowInfo.hidden === true || rowInfo.level !== undefined)) {
+          continue;
         }
-
-        const headers = XLSX.utils.sheet_to_json(
-          worksheet,
-          {
-            header: 1,
-            range: 0,
-          }
-        )[0];
-
-        const jsonData = visibleRows.map((row) => {
-
-          const obj = {};
-
-          headers.forEach((h, i) => {
-            obj[h] = row[i];
-          });
-
-          return obj;
-
-        });
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error('Empty file');
-        }
-        const sample = jsonData[0] || {};
-
-        const notificationKey = findKey(sample, [
-          'Notification',
-          'Notification No',
-          'Notification Number',
-        ]);
-
-        const equipmentKey = findKey(sample, [
-          'Equipment',
-          'Equipment Name',
-          'Equip',
-        ]);
-
-        const statusKey = findKey(sample, [
-          'Status',
-          'User status',
-        ]);
-
-        const typeKey = findKey(sample, [
-          'Type',
-          'Notification Type',
-        ]);
-
-        const workCtrKey = findKey(sample, [
-          'Main WorkCtr',
-        ]);
-
-        const requiredEndKey = findKey(sample, [
-          'Required End',
-        ]);
-
-        const notifDateKey = findKey(sample, [
-          'Notif.date',
-        ]);
-
-        const priorityKey = findKey(sample, [
-          'Priority',
-        ]);
-        // KEEP YOUR EXISTING LOGIC SAME
-        const updatedNotifications = jsonData
-          .filter((row) => {
-
-            const notificationKey = findKey(row, [
-              'Notification',
-              'Notification No',
-              'Notification Number',
-            ]);
-
-            return row[notificationKey];
-
-          })
-          .map((row, idx) => {
-
-            return {
-
-              id:
-                row[notificationKey] ||
-                `N-${idx + 1}`,
-
-              equip:
-                row[equipmentKey] ||
-                'Unknown equipment',
-
-              status: (() => {
-
-                const rawStatus = String(
-                  row[statusKey] || ''
-                ).toUpperCase();
-
-                if (rawStatus.includes('APRD'))
-                  return 'Approved';
-
-                if (rawStatus.includes('APRE'))
-                  return 'Pending';
-
-                if (rawStatus.includes('NOPR'))
-                  return 'In Progress';
-
-                return rawStatus || 'Pending';
-
-              })(),
-
-              type:
-                row[typeKey] || 'N/A',
-
-              workCtr:
-                row[workCtrKey] || 'N/A',
-
-              requiredEnd:
-                row[requiredEndKey] || 'N/A',
-
-              notifDate:
-                row[notifDateKey] || 'N/A',
-
-              priority:
-                row[priorityKey] || 'Normal',
-
-              color: [
-                'rose',
-                'indigo',
-                'emerald',
-                'amber',
-              ][idx % 4],
-
-            };
-          });
-        setUploadMessage("Updating dashboard...");
-        setNotifications(updatedNotifications);
-        setCurrentPage(1);
-        setRawData(jsonData);
-        setShowUploadDialog(false);
-        setSelectedFile(null);
-        setUploadLoading(false);
-        setUploadMessage("Dashboard updated successfully!");
-        setTimeout(() => {
-          setUploadMessage("");
-        }, 2500);
-      } catch (err) {
-        console.error(err);
-        setUploadLoading(false);
-        setUploadMessage("Error uploading file!");
+        visibleRows.push(allRows[i]);
       }
-    };
-    reader.readAsArrayBuffer(selectedFile);
+
+      setUploadMessage("Mapping columns...");
+      setProcessingPercent(70);
+      await yieldToMain();
+
+      const jsonData = visibleRows.map((row) => {
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = row[idx]; });
+        return obj;
+      });
+
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('File appears to be empty');
+      }
+
+      const sample = jsonData[0] || {};
+      const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
+      const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
+      const statusKey = findKey(sample, ['Status', 'User status']);
+      const typeKey = findKey(sample, ['Type', 'Notification Type']);
+      const workCtrKey = findKey(sample, ['Main WorkCtr']);
+      const requiredEndKey = findKey(sample, ['Required End']);
+      const notifDateKey = findKey(sample, ['Notif.date']);
+      const priorityKey = findKey(sample, ['Priority']);
+
+      setUploadMessage("Building analytics...");
+      setProcessingPercent(90);
+      await yieldToMain();
+
+      const updatedNotifications = jsonData
+        .filter((row) => {
+          const nk = findKey(row, ['Notification', 'Notification No', 'Notification Number']);
+          return row[nk];
+        })
+        .map((row, idx) => ({
+          id: row[notificationKey] || `N-${idx + 1}`,
+          equip: row[equipmentKey] || 'Unknown equipment',
+          status: (() => {
+            const raw = String(row[statusKey] || '').toUpperCase();
+            if (raw.includes('APRD')) return 'Approved';
+            if (raw.includes('APRE')) return 'Pending';
+            if (raw.includes('NOPR')) return 'In Progress';
+            return raw || 'Pending';
+          })(),
+          type: row[typeKey] || 'N/A',
+          workCtr: row[workCtrKey] || 'N/A',
+          requiredEnd: row[requiredEndKey] || 'N/A',
+          notifDate: row[notifDateKey] || 'N/A',
+          priority: row[priorityKey] || 'Normal',
+          color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
+        }));
+
+      setProcessingPercent(100);
+      setUploadMessage("Dashboard ready!");
+      await yieldToMain();
+
+      setNotifications(updatedNotifications);
+      setCurrentPage(1);
+      setRawData(jsonData);
+      setSelectedFile(null);
+
+      setTimeout(() => {
+        setUploadLoading(false);
+        setProcessingPercent(0);
+        setUploadMessage("");
+      }, 400);
+
+    } catch (err) {
+      console.error(err);
+      setUploadMessage("Error: " + err.message);
+      await yieldToMain();
+      setTimeout(() => {
+        setUploadLoading(false);
+        setProcessingPercent(0);
+        setUploadMessage("");
+      }, 3000);
+    }
   };
   return (
     <Layout>
@@ -736,6 +663,46 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
+      {uploadLoading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl text-center">
+            {/* Loader */}
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-indigo-50 text-5xl">
+              📊
+            </div>
+
+            {/* Heading */}
+            <h2 className="text-2xl font-bold text-slate-900">
+              Processing File
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Please wait while analytics are being generated...
+            </p>
+
+            {/* Progress Bar */}
+            <div className="mt-8">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700">
+                  Processing
+                </span>
+                <span className="text-sm font-bold text-indigo-600">
+                  {processingPercent}%
+                </span>
+              </div>
+
+              <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                  style={{
+                    width: `${processingPercent}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {rawData.length > 0 ? (
         <>
 
@@ -749,7 +716,6 @@ const Dashboard = () => {
                 bgColor: 'bg-indigo-50',
                 textColor: 'text-indigo-600',
                 icon: '📊',
-                trend: '+2.6%'
               },
               {
                 label: 'Notif > 15 days',
@@ -758,7 +724,6 @@ const Dashboard = () => {
                 bgColor: 'bg-purple-50',
                 textColor: 'text-purple-600',
                 icon: '⏱️',
-                trend: '-0.1%'
               },
               {
                 label: 'Units impacted',
@@ -767,7 +732,6 @@ const Dashboard = () => {
                 bgColor: 'bg-rose-50',
                 textColor: 'text-rose-600',
                 icon: '🏭',
-                trend: '+3.6%'
               },
               {
                 label: 'M2 Pending > 7 days',
@@ -775,8 +739,7 @@ const Dashboard = () => {
                 detail: 'M2 overdue notifications',
                 bgColor: 'bg-orange-50',
                 textColor: 'text-orange-600',
-                icon: '🟧',
-                trend: '+1.8%'
+                icon: '⏳',
               },
               {
                 label: 'M1 Pending > 25 days',
@@ -784,18 +747,16 @@ const Dashboard = () => {
                 detail: 'M1 overdue notifications',
                 bgColor: 'bg-fuchsia-50',
                 textColor: 'text-fuchsia-600',
-                icon: '🟪',
-                trend: '+0.9%'
+                icon: '⚠️',
               },
             ].map((stat) => (
               <div key={stat.label} className={`group relative rounded-3xl ${stat.bgColor} p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 border border-white/50`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div className={`p-2 rounded-xl bg-white/60 shadow-sm ${stat.textColor} text-xl`}>
+                <div className="absolute top-4 right-4">
+                  <div
+                    className={`flex h-6 w-6 items-center justify-center rounded-xl bg-white/70 shadow-sm ${stat.textColor} text-lg`}
+                  >
                     {stat.icon}
                   </div>
-                  <span className={`text-sm font-bold ${stat.textColor}`}>
-                    {stat.trend} <svg className="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                  </span>
                 </div>
                 <p className="text-sm font-bold text-slate-600">{stat.label}</p>
                 <div className="mt-1 flex items-end justify-between">
@@ -1214,18 +1175,6 @@ const Dashboard = () => {
                 </div>
               </div>
             )}
-            {uploadMessage && (
-              <div
-                className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${uploadLoading
-                    ? "bg-indigo-50 text-indigo-700"
-                    : uploadMessage.includes("success")
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-rose-50 text-rose-700"
-                  }`}
-              >
-                {uploadMessage}
-              </div>
-            )}
             {/* Buttons */}
             <div className="flex gap-3">
               <button
@@ -1240,9 +1189,9 @@ const Dashboard = () => {
                 className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
               >
                 {uploadLoading
-                  ? "Processing..."
+                  ? "Processing File..."
                   : selectedFile
-                    ? "Upload to Dashboard"
+                    ? "Process File"
                     : "Select File"}
               </button>
               <button
