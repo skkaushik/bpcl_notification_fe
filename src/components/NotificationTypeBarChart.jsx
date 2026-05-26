@@ -6,8 +6,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid, 
-   LabelList,
+  CartesianGrid,
+  LabelList,
 } from 'recharts';
 
 const normalizeKey = (key = '') =>
@@ -84,7 +84,7 @@ const buildChartData = (data) => {
 
   // Detect actual Excel columns
   const typeKey = findNotificationTypeKey(data[0]);
-  
+
   const keys = Object.keys(data[0]);
   const notifTargets = ['notification', 'notificationno', 'notificationnumber', 'notifictn'];
   const notifKey = keys.find((key) => {
@@ -103,10 +103,10 @@ const buildChartData = (data) => {
     }));
   }
   const unitKey = findKey(data[0], [
-  'Main WorkCtr',
-  'MainWorkCtr',
-  'Unit',
-]);
+    'Main WorkCtr',
+    'MainWorkCtr',
+    'Unit',
+  ]);
 
   // Count unique Notification IDs per M1-M9 value
   data.forEach((row) => {
@@ -114,18 +114,18 @@ const buildChartData = (data) => {
     const normalizedType = rawType.replace(/\s+/g, '');
     const notifId = String(row[notifKey] ?? '').trim();
     const rawUnit = String(
-  row[unitKey] ?? ''
-)
-  .trim()
-  .toUpperCase();
+      row[unitKey] ?? ''
+    )
+      .trim()
+      .toUpperCase();
 
-// ONLY MR and MS
-if (
-  !rawUnit.startsWith('MR') &&
-  !rawUnit.startsWith('MS')
-) {
-  return;
-}
+    // ONLY MR and MS
+    if (
+      !rawUnit.startsWith('MR') &&
+      !rawUnit.startsWith('MS')
+    ) {
+      return;
+    }
 
     if (defaultTypes.includes(normalizedType) && notifId) {
       notificationSets[normalizedType].add(notifId);

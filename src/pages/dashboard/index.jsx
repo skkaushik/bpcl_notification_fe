@@ -561,7 +561,7 @@ const Dashboard = () => {
       setCurrentPage(1);
       setRawData(jsonData);
       setSelectedFile(null);
-      
+
       setTimeout(() => {
         setUploadLoading(false);
         setProcessingPercent(0);
