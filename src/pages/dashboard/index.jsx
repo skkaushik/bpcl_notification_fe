@@ -1,9 +1,12 @@
 import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
 import UnitWiseBarChart from "../../components/UnitWiseBarChart";
+import SendEmailModal from "../../components/SendEmailModal";
+import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import Select from "react-select";
+import { emailConfig } from "../../data/emailConfig";
 import {
   ResponsiveContainer,
   BarChart,
@@ -87,7 +90,14 @@ const calculateKpiStats = (data = []) => {
 
     if (!dateValue) return 0;
 
-    const d = new Date(dateValue);
+    let d;
+    if (dateValue instanceof Date) {
+      d = dateValue;
+    } else if (typeof dateValue === 'number') {
+      d = new Date((dateValue - 25569) * 86400 * 1000);
+    } else {
+      d = new Date(String(dateValue).trim());
+    }
 
     if (isNaN(d)) return 0;
 
@@ -333,6 +343,7 @@ const buildDueChartData = (data = []) => {
 
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showGlobalEmailModal, setShowGlobalEmailModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [rawData, setRawData] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -342,6 +353,10 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
+  const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [ageDayFilter, setAgeDayFilter] = useState('');
   const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
 
   // Derive the actual type key from rawData once
@@ -381,24 +396,99 @@ const Dashboard = () => {
 
   // Filtered notifications (table rows) based on active type
   const filteredNotifications = useMemo(() => {
+    let result = notifications.filter(n => {
+      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
+      return rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
+    });
 
-    if (activeTypeFilter.length === 0) {
-      return notifications;
+    if (activeTypeFilter.length > 0) {
+      const selectedValues = activeTypeFilter.map((item) => item.value);
+      result = result.filter((n) =>
+        selectedValues.includes(
+          String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '')
+        )
+      );
+    }
+    return result;
+  }, [notifications, activeTypeFilter]);
+
+  // Filtered notifications strictly for the email modal
+  const emailFilteredNotifications = useMemo(() => {
+    let result = notifications.filter(n => {
+      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
+      return rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
+    });
+
+    if (emailActiveTypeFilter.length > 0) {
+      const selectedValues = emailActiveTypeFilter.map((item) => item.value);
+      result = result.filter((n) =>
+        selectedValues.includes(
+          String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '')
+        )
+      );
     }
 
-    const selectedValues =
-      activeTypeFilter.map((item) => item.value);
+    if (startDateFilter || endDateFilter || ageDayFilter) {
+      const today = new Date();
+      
+      result = result.filter(n => {
+        let passDate = true;
+        let passAge = true;
+        const notifDate = n.notifDate && n.notifDate !== 'N/A' ? new Date(n.notifDate) : null;
+        
+        if (notifDate && !isNaN(notifDate)) {
+          if (startDateFilter) {
+            passDate = passDate && (notifDate >= new Date(startDateFilter));
+          }
+          if (endDateFilter) {
+            passDate = passDate && (notifDate <= new Date(endDateFilter));
+          }
+          
+          if (ageDayFilter) {
+            const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
+            passAge = ageDays >= parseInt(ageDayFilter, 10);
+          }
+        } else {
+          passDate = false;
+        }
+        
+        return passDate && passAge;
+      });
+    }
 
-    return notifications.filter((n) =>
-      selectedValues.includes(
-        String(n.type ?? '')
-          .trim()
-          .toUpperCase()
-          .replace(/\s+/g, '')
-      )
-    );
+    return result;
+  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageDayFilter]);
 
-  }, [notifications, activeTypeFilter]);
+  const emailGroups = useMemo(() => {
+    const groups = {};
+    emailFilteredNotifications.forEach(notif => {
+      const type = String(notif.type ?? '').trim().toUpperCase();
+      const rawUnit = String(notif.workCtr ?? '').trim().toUpperCase();
+      const status = String(notif.status ?? '').trim().toUpperCase();
+      let prefix = ''; let plantName = rawUnit;
+      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
+        prefix = rawUnit.substring(0, 2);
+        plantName = rawUnit.substring(2).trim();
+      }
+      const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
+      if (plantConfig) {
+        const isProcessType = ['M1', 'M2', 'M6'].includes(type);
+        const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
+        let targetEmail = '';
+        if (isProcessType && isProcessStatus) targetEmail = plantConfig.processEmail;
+        else if (prefix === 'MR') targetEmail = plantConfig.rotaryMail;
+        else if (prefix === 'MS') targetEmail = plantConfig.staticMail;
+        else targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
+
+        if (targetEmail) {
+          if (!groups[targetEmail]) groups[targetEmail] = [];
+          groups[targetEmail].push(notif.id);
+        }
+      }
+    });
+    return groups;
+  }, [filteredNotifications]);
+
   const dueChartData = useMemo(() => {
     return buildDueChartData(filteredRawData);
   }, [filteredRawData]);
@@ -448,6 +538,48 @@ const Dashboard = () => {
     amber: { badgeBg: 'bg-amber-50', badgeText: 'text-amber-600', badgeRing: 'ring-amber-600/10', dot: 'bg-amber-600' },
     emerald: { badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-600', badgeRing: 'ring-emerald-600/10', dot: 'bg-emerald-600' },
     cyan: { badgeBg: 'bg-cyan-50', badgeText: 'text-cyan-600', badgeRing: 'ring-cyan-600/10', dot: 'bg-cyan-600' },
+  };
+
+  const handleSendEmail = (notification) => {
+    if (!notification) return;
+    const type = String(notification.type ?? '').trim().toUpperCase();
+    const rawUnit = String(notification.workCtr ?? '').trim().toUpperCase();
+    const status = String(notification.status ?? '').trim().toUpperCase();
+    
+    let prefix = '';
+    let plantName = rawUnit;
+    
+    if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
+      prefix = rawUnit.substring(0, 2);
+      plantName = rawUnit.substring(2).trim();
+    }
+  
+    const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
+    let targetEmail = '';
+  
+    if (plantConfig) {
+      const isProcessType = ['M1', 'M2', 'M6'].includes(type);
+      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
+      
+      if (isProcessType && isProcessStatus) {
+        targetEmail = plantConfig.processEmail;
+      } else if (prefix === 'MR') {
+        targetEmail = plantConfig.rotaryMail;
+      } else if (prefix === 'MS') {
+        targetEmail = plantConfig.staticMail;
+      } else {
+        // Fallback if not specifically process/rotary/static, but we can default to process or rotary based on config
+        targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
+      }
+    }
+  
+    if (targetEmail) {
+      const subject = encodeURIComponent(`Notification Alert: ${notification.id} - ${notification.equip}`);
+      const body = encodeURIComponent(`Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`);
+      window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+    } else {
+      alert(`No email configuration found for plant: ${plantName} with prefix ${prefix}`);
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -520,10 +652,10 @@ const Dashboard = () => {
       const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
       const equipmentKey = findKey(sample, ['Equipment', 'Equipment Name', 'Equip']);
       const statusKey = findKey(sample, ['Status', 'User status']);
-      const typeKey = findKey(sample, ['Type', 'Notification Type']);
-      const workCtrKey = findKey(sample, ['Main WorkCtr']);
-      const requiredEndKey = findKey(sample, ['Required End']);
-      const notifDateKey = findKey(sample, ['Notif.date']);
+      const typeKey = findKey(sample, ['Type', 'Notification Type', 'Notif Type', 'NotificationType', 'Notifictn type']);
+      const workCtrKey = findKey(sample, ['Main WorkCtr', 'MainWorkCtr', 'Unit']);
+      const requiredEndKey = findKey(sample, ['Required End', 'RequiredEnd']);
+      const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
       const priorityKey = findKey(sample, ['Priority']);
 
       setUploadMessage("Building analytics...");
@@ -535,23 +667,35 @@ const Dashboard = () => {
           const nk = findKey(row, ['Notification', 'Notification No', 'Notification Number']);
           return row[nk];
         })
-        .map((row, idx) => ({
-          id: row[notificationKey] || `N-${idx + 1}`,
-          equip: row[equipmentKey] || 'Unknown equipment',
-          status: (() => {
-            const raw = String(row[statusKey] || '').toUpperCase();
-            if (raw.includes('APRD')) return 'Approved';
-            if (raw.includes('APRE')) return 'Pending';
-            if (raw.includes('NOPR')) return 'In Progress';
-            return raw || 'Pending';
-          })(),
-          type: row[typeKey] || 'N/A',
-          workCtr: row[workCtrKey] || 'N/A',
-          requiredEnd: row[requiredEndKey] || 'N/A',
-          notifDate: row[notifDateKey] || 'N/A',
-          priority: row[priorityKey] || 'Normal',
-          color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
-        }));
+        .map((row, idx) => {
+          const parseDate = (val) => {
+            if (!val) return 'N/A';
+            let d;
+            if (val instanceof Date) d = val;
+            else if (typeof val === 'number') d = new Date((val - 25569) * 86400 * 1000);
+            else d = new Date(String(val).trim());
+            if (isNaN(d)) return String(val);
+            return d.toISOString().split('T')[0];
+          };
+
+          return {
+            id: row[notificationKey] || `N-${idx + 1}`,
+            equip: row[equipmentKey] || 'Unknown equipment',
+            status: (() => {
+              const raw = String(row[statusKey] || '').toUpperCase();
+              if (raw.includes('APRD')) return 'Approved';
+              if (raw.includes('APRE')) return 'Pending';
+              if (raw.includes('NOPR')) return 'In Progress';
+              return raw || 'Pending';
+            })(),
+            type: row[typeKey] || 'N/A',
+            workCtr: row[workCtrKey] || 'N/A',
+            requiredEnd: parseDate(row[requiredEndKey]),
+            notifDate: parseDate(row[notifDateKey]),
+            priority: row[priorityKey] || 'Normal',
+            color: ['rose', 'indigo', 'emerald', 'amber'][idx % 4],
+          };
+        });
 
       setProcessingPercent(100);
       setUploadMessage("Dashboard ready!");
@@ -587,76 +731,34 @@ const Dashboard = () => {
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
           <p className="mt-1 text-sm sm:text-base text-slate-500 font-medium">Real-time monitoring</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-          <div className="w-full sm:w-[280px]">
-
-            <Select
-              isMulti
-              options={[
-                { value: 'M1', label: 'M1' },
-                { value: 'M2', label: 'M2' },
-                { value: 'M3', label: 'M3' },
-                { value: 'M4', label: 'M4' },
-                { value: 'M5', label: 'M5' },
-                { value: 'M6', label: 'M6' },
-                { value: 'M7', label: 'M7' },
-                { value: 'M8', label: 'M8' },
-                { value: 'M9', label: 'M9' },
-              ]}
-
-              value={activeTypeFilter}
-
-              onChange={(selected) => {
-                setActiveTypeFilter(selected || []);
-                setCurrentPage(1);
-              }}
-
-              placeholder="Filter notification types..."
-
-              className="text-sm"
-
-              styles={{
-
-                control: (base) => ({
-                  ...base,
-                  minHeight: '46px',
-                  borderRadius: '14px',
-                  borderColor: '#e2e8f0',
-                  boxShadow: 'none',
-                  paddingLeft: '4px',
-                }),
-
-                multiValue: (base) => ({
-                  ...base,
-                  borderRadius: '10px',
-                  backgroundColor: '#eef2ff',
-                }),
-
-                multiValueLabel: (base) => ({
-                  ...base,
-                  color: '#4f46e5',
-                  fontWeight: 700,
-                }),
-
-                option: (base, state) => ({
-                  ...base,
-                  backgroundColor: state.isSelected
-                    ? '#4f46e5'
-                    : state.isFocused
-                      ? '#eef2ff'
-                      : 'white',
-                  color: state.isSelected
-                    ? 'white'
-                    : '#0f172a',
-                }),
-
-              }}
-            />
-
-          </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto justify-end">
+          {rawData.length > 0 && (
+            <div className="w-full sm:w-64">
+              <Select
+                isMulti
+                options={ALL_TYPES.map(t => ({ value: t, label: t }))}
+                value={activeTypeFilter}
+                onChange={(selected) => setActiveTypeFilter(selected || [])}
+                placeholder="Filter type..."
+                className="text-sm"
+                styles={{
+                  control: (base) => ({ ...base, minHeight: '42px', borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: 'none' }),
+                  multiValue: (base) => ({ ...base, borderRadius: '8px', backgroundColor: '#eef2ff' }),
+                  multiValueLabel: (base) => ({ ...base, color: '#4f46e5', fontWeight: 700 }),
+                }}
+              />
+            </div>
+          )}
+          <button
+            onClick={() => setShowGlobalEmailModal(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            Send Emails
+          </button>
           <button
             onClick={() => setShowUploadDialog(true)}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
             Upload File
@@ -766,9 +868,12 @@ const Dashboard = () => {
             ))}
           </div>
           {/* Charts Grid */}
-          <div className="mt-8">
+          <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
               <NotificationTypeBarChart data={filteredRawData} />
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden flex flex-col items-center justify-center">
+              <MrMsPieChart data={filteredRawData} />
             </div>
           </div>
 
@@ -917,8 +1022,7 @@ const Dashboard = () => {
           </div>
           {/* Main Content Grid */}
           <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          </div>
-        </>
+          </div>        </>
       ) : (
         <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
           {/* Icon */}
@@ -1083,13 +1187,20 @@ const Dashboard = () => {
 
             {/* Footer */}
 
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex justify-end gap-3">
+              <button
+                onClick={() => handleSendEmail(selectedNotification)}
+                className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                Send Email
+              </button>
 
               <button
                 onClick={() =>
                   setSelectedNotification(null)
                 }
-                className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700"
+                className="rounded-2xl bg-slate-200 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-300"
               >
                 Close
               </button>
@@ -1206,6 +1317,14 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+      
+      {/* Global Email Modal */}
+      <SendEmailModal
+        isOpen={showGlobalEmailModal}
+        onClose={() => setShowGlobalEmailModal(false)}
+        notifications={notifications}
+      />
+
       <input
         ref={fileInputRef}
         type="file"
