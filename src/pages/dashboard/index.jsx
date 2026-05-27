@@ -5,7 +5,7 @@ import SendEmailModal from "../../components/SendEmailModal";
 import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
-import Select, { components } from "react-select";
+import NotificationTypeFilter, { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
 import {
   ResponsiveContainer,
@@ -15,6 +15,11 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  Legend,
 } from 'recharts';
 
 
@@ -339,63 +344,6 @@ const buildDueChartData = (data = []) => {
   return Object.values(groupedData);
 
 };
-const InputOption = ({
-  getStyles,
-  Icon,
-  isDisabled,
-  isFocused,
-  isSelected,
-  children,
-  innerProps,
-  ...rest
-}) => {
-  const [isActive, setIsActive] = useState(false);
-  const onMouseDown = () => setIsActive(true);
-  const onMouseUp = () => setIsActive(false);
-  const onMouseLeave = () => setIsActive(false);
-
-  // Style the option container
-  let bg = "transparent";
-  if (isFocused) bg = "#f8fafc";
-  if (isActive) bg = "#f1f5f9";
-
-  const style = {
-    alignItems: "center",
-    backgroundColor: bg,
-    color: "inherit",
-    display: "flex ",
-    padding: "8px 12px",
-    cursor: "pointer",
-  };
-
-  const props = {
-    ...innerProps,
-    onMouseDown,
-    onMouseUp,
-    onMouseLeave,
-    style,
-  };
-
-  return (
-    <components.Option
-      {...rest}
-      isDisabled={isDisabled}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      getStyles={getStyles}
-      innerProps={props}
-    >
-      <input 
-        type="checkbox" 
-        checked={isSelected} 
-        readOnly 
-        className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-      />
-      <span className="text-sm font-medium text-slate-700">{children}</span>
-    </components.Option>
-  );
-};
-
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showGlobalEmailModal, setShowGlobalEmailModal] = useState(false);
@@ -408,12 +356,7 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
-  const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
-  const [ageDayFilter, setAgeDayFilter] = useState('');
-  const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
-
+  
   // Derive the actual type key from rawData once
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -467,82 +410,6 @@ const Dashboard = () => {
     return result;
   }, [notifications, activeTypeFilter]);
 
-  // Filtered notifications strictly for the email modal
-  const emailFilteredNotifications = useMemo(() => {
-    let result = notifications.filter(n => {
-      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
-      return rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
-    });
-
-    if (emailActiveTypeFilter.length > 0) {
-      const selectedValues = emailActiveTypeFilter.map((item) => item.value);
-      result = result.filter((n) =>
-        selectedValues.includes(
-          String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '')
-        )
-      );
-    }
-
-    if (startDateFilter || endDateFilter || ageDayFilter) {
-      const today = new Date();
-
-      result = result.filter(n => {
-        let passDate = true;
-        let passAge = true;
-        const notifDate = n.notifDate && n.notifDate !== 'N/A' ? new Date(n.notifDate) : null;
-
-        if (notifDate && !isNaN(notifDate)) {
-          if (startDateFilter) {
-            passDate = passDate && (notifDate >= new Date(startDateFilter));
-          }
-          if (endDateFilter) {
-            passDate = passDate && (notifDate <= new Date(endDateFilter));
-          }
-
-          if (ageDayFilter) {
-            const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
-            passAge = ageDays >= parseInt(ageDayFilter, 10);
-          }
-        } else {
-          passDate = false;
-        }
-
-        return passDate && passAge;
-      });
-    }
-
-    return result;
-  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageDayFilter]);
-
-  const emailGroups = useMemo(() => {
-    const groups = {};
-    emailFilteredNotifications.forEach(notif => {
-      const type = String(notif.type ?? '').trim().toUpperCase();
-      const rawUnit = String(notif.workCtr ?? '').trim().toUpperCase();
-      const status = String(notif.status ?? '').trim().toUpperCase();
-      let prefix = ''; let plantName = rawUnit;
-      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
-        prefix = rawUnit.substring(0, 2);
-        plantName = rawUnit.substring(2).trim();
-      }
-      const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
-      if (plantConfig) {
-        const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-        const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
-        let targetEmail = '';
-        if (isProcessType && isProcessStatus) targetEmail = plantConfig.processEmail;
-        else if (prefix === 'MR') targetEmail = plantConfig.rotaryMail;
-        else if (prefix === 'MS') targetEmail = plantConfig.staticMail;
-        else targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
-
-        if (targetEmail) {
-          if (!groups[targetEmail]) groups[targetEmail] = [];
-          groups[targetEmail].push(notif.id);
-        }
-      }
-    });
-    return groups;
-  }, [filteredNotifications]);
 
   const dueChartData = useMemo(() => {
     return buildDueChartData(filteredRawData);
@@ -587,6 +454,17 @@ const Dashboard = () => {
     }
   }, [rawData]);
 
+  useEffect(() => {
+    if (selectedNotification) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedNotification]);
+
   const colorStyles = {
     indigo: { badgeBg: 'bg-indigo-50', badgeText: 'text-indigo-600', badgeRing: 'ring-indigo-600/10', dot: 'bg-indigo-600' },
     rose: { badgeBg: 'bg-rose-50', badgeText: 'text-rose-700', badgeRing: 'ring-rose-600/10', dot: 'bg-rose-600' },
@@ -614,7 +492,7 @@ const Dashboard = () => {
 
     if (plantConfig) {
       const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
+      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO') || status.includes('JBPR');
 
       if (isProcessType && isProcessStatus) {
         targetEmail = plantConfig.processEmail;
@@ -736,13 +614,7 @@ const Dashboard = () => {
           return {
             id: row[notificationKey] || `N-${idx + 1}`,
             equip: row[equipmentKey] || 'Unknown equipment',
-            status: (() => {
-              const raw = String(row[statusKey] || '').toUpperCase();
-              if (raw.includes('APRD')) return 'Approved';
-              if (raw.includes('APRE')) return 'Pending';
-              if (raw.includes('NOPR')) return 'In Progress';
-              return raw || 'Pending';
-            })(),
+            status: String(row[statusKey] || '').toUpperCase().trim() || 'N/A',
             type: row[typeKey] || 'N/A',
             workCtr: row[workCtrKey] || 'N/A',
             requiredEnd: parseDate(row[requiredEndKey]),
@@ -788,66 +660,10 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto justify-end">
           {rawData.length > 0 && (
             <div className="w-full sm:w-64">
-              <Select
-  isMulti
-  // Essential for Multi-Select UX:
-  closeMenuOnSelect={false} 
-  hideSelectedOptions={false}
-  components={{
-    Option: InputOption,
-  }}
-  
-  options={ALL_TYPES.map((t) => ({ value: t, label: t }))}
-  value={activeTypeFilter}
-  onChange={(selected) => setActiveTypeFilter(selected || [])}
-  placeholder="Filter type..."
-  className="text-sm"
-  styles={{
-    control: (base) => ({
-      ...base,
-      minHeight: "42px",
-      borderRadius: "12px",
-      borderColor: "#e2e8f0",
-      boxShadow: "none",
-      "&:hover": { borderColor: "#cbd5e1" },
-    }),
-    multiValue: (base) => ({
-      ...base,
-      borderRadius: "8px",
-      backgroundColor: "#eef2ff",
-      padding: "2px 4px",
-    }),
-    multiValueLabel: (base) => ({
-      ...base,
-      color: "#4f46e5",
-      fontWeight: 700,
-    }),
-    multiValueRemove: (base) => ({
-      ...base,
-      color: "#4f46e5",
-      ":hover": {
-        backgroundColor: "#e0e7ff",
-        color: "#4338ca",
-        borderRadius: "6px",
-      },
-    }),
-    menu: (base) => ({
-      ...base,
-      borderRadius: "12px",
-      overflow: "hidden",
-      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-      border: "1px solid #e2e8f0",
-    }),
-    menuList: (base) => ({
-      ...base,
-      padding: "4px",
-      "::-webkit-scrollbar": { width: "8px" },
-      "::-webkit-scrollbar-track": { background: "transparent" },
-      "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" },
-      "::-webkit-scrollbar-thumb:hover": { background: "#94a3b8" },
-    }),
-  }}
-/>
+              <NotificationTypeFilter
+                value={activeTypeFilter}
+                onChange={setActiveTypeFilter}
+              />
             </div>
           )}
           <button
@@ -979,7 +795,7 @@ const Dashboard = () => {
           </div>
 
           {/* Static and Rotary Unit-wise Charts */}
-          <div className="mt-8 grid gap-8 grid-cols-1">
+          <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-2">
             <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
               <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
             </div>
@@ -992,139 +808,42 @@ const Dashboard = () => {
 
           <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
 
-            <div className="mb-6">
-
-              <h3 className="text-xl font-bold text-slate-900">
-                Total Due Notifications
-              </h3>
-
-              <p className="text-sm text-slate-500">
-                MR vs MS notification comparison by unit
-              </p>
-            </div>
-            <>
-              <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-
-                <div className="min-w-[600px] h-[400px] sm:h-[470px]">
-
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                  >
-
-                    <BarChart
-                      data={dueChartData}
-                      margin={{
-                        top: 10,
-                        right: 30,
-                        left: 20,
-                        bottom: 60,
-                      }}
-                      barCategoryGap={18}
-                    >
-                      {/* Gradient */}
-                      <defs>
-                        <linearGradient
-                          id="notificationBarGradient"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#38bdf8" />
-                          <stop offset="100%" stopColor="#2563eb" />
-                        </linearGradient>
-                      </defs>
-
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        horizontal={false}
-                        vertical={true}
-                        stroke="#e2e8f0"
-                      />
-
-                      <XAxis
-                        dataKey="unit"
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        tick={({ x, y, payload }) => (
-
-                          <g transform={`translate(${x},${y})`}>
-
-                            {/* MR MS Row */}
-                            <text
-                              x={-18}
-                              y={18}
-                              textAnchor="middle"
-                              fill="#2563eb"
-                              fontSize="11"
-                              fontWeight="700"
-                            >
-                              MS
-                            </text>
-                            <text
-                              x={18}
-                              y={18}
-                              textAnchor="middle"
-                              fill="#f59e0b"
-                              fontSize="11"
-                              fontWeight="700"
-                            >
-                              MR
-                            </text>
-
-                            {/* UNIT NAME */}
-                            <text
-                              x={0}
-                              y={38}
-                              textAnchor="middle"
-                              fill="#334155"
-                              fontSize="13"
-                              fontWeight="700"
-                            >
-                              {payload.value}
-                            </text>
-                          </g>
-                        )}
-                      />
-                      <YAxis
-                        type="number"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: '#64748b',
-                          fontSize: 12,
-                        }}
-                      />
-
-                      <Tooltip
-                        cursor={{
-                          fill: 'rgba(99,102,241,0.06)',
-                        }}
-                        contentStyle={{
-                          borderRadius: '14px',
-                          border: '1px solid #e2e8f0',
-                        }}
-                      />
-                      <Bar
-                        dataKey="MS"
-                        fill="url(#notificationBarGradient)"
-                        radius={[10, 10, 0, 0]}
-                        barSize={28}
-                      />
-                      <Bar
-                        dataKey="MR"
-                        fill="#f59e0b"
-                        radius={[10, 10, 0, 0]}
-                        barSize={28}
-                      />
-                    </BarChart>
-
-                  </ResponsiveContainer>
-                </div>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  Total Due Notifications
+                </h3>
+                <p className="text-sm text-slate-500">
+                  MR vs MS notification comparison by unit (Area Chart)
+                </p>
               </div>
-            </>
+            </div>
+
+            <div className="w-full">
+              <div className="w-full h-[320px] sm:h-[470px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dueChartData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
+                    <defs>
+                      <linearGradient id="msAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="mrAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="unit" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                    <YAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                    <Tooltip contentStyle={{ borderRadius: '14px', border: '1px solid #e2e8f0' }} />
+                    <Legend verticalAlign="top" align="right" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                    <Area type="monotone" dataKey="MS" name="MS (Static)" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#msAreaGrad)" />
+                    <Area type="monotone" dataKey="MR" name="MR (Rotary)" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#mrAreaGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
           {/* Main Content Grid */}
           <div className="mt-8 grid gap-8 lg:grid-cols-3">
