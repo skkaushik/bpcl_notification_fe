@@ -1,10 +1,66 @@
 import React, { useState, useMemo, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import Select from 'react-select';
+import Select, { components } from 'react-select';
 import { emailConfig } from '../data/emailConfig';
 
-const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
+const ALL_TYPES = [
+  'M1',
+  'M2',
+  'M3',
+  'M4',
+  'M5',
+  'M6',
+  'M7',
+  'M8',
+  'M9'
+];
+const SELECT_ALL_OPTION = {
+  value: "__ALL__",
+  label: "Select All"
+};
+const InputOption = ({
+  getStyles,
+  isDisabled,
+  isFocused,
+  isSelected,
+  children,
+  innerProps,
+  ...rest
+}) => {
+  const style = {
+    alignItems: "center",
+    backgroundColor: isFocused ? "#f8fafc" : "white",
+    color: "inherit",
+    display: "flex",
+    padding: "10px 14px",
+    cursor: "pointer",
+  };
+  const props = {
+    ...innerProps,
+    style,
+  };
+  return (
+    <components.Option
+      {...rest}
+      isDisabled={isDisabled}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      getStyles={getStyles}
+      innerProps={props}
+    >
+      <input
+        type="checkbox"
+        checked={isSelected}
+        readOnly
+        className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600"
+      />
+      <span className="text-sm font-medium text-slate-700">
+        {children}
+      </span>
+    </components.Option>
+  );
+};
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
@@ -168,22 +224,50 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     </div>
 </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Age (Older than X days)</label>
-                <input 
-                  type="number" 
-                  className="w-full text-sm px-3 py-2 rounded-xl border border-slate-200" 
-                  placeholder="e.g. 15"
-                  value={ageDayFilter}
-                  onChange={(e) => setAgeDayFilter(e.target.value)}
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Notification Type</label>
                 <Select
                   isMulti
-                  options={ALL_TYPES.map(t => ({ value: t, label: t }))}
+                  closeMenuOnSelect={false}
+                  hideSelectedOptions={false}
+                  components={{ Option: InputOption }}
+                  options={[
+                    SELECT_ALL_OPTION,
+                    ...ALL_TYPES.map(t => ({
+                      value: t,
+                      label: t
+                    }))
+                  ]}
                   value={emailActiveTypeFilter}
-                  onChange={(selected) => setEmailActiveTypeFilter(selected || [])}
+                  onChange={(selected) => {
+                        if (!selected) {
+                          setEmailActiveTypeFilter([]);
+                          return;
+                        }
+                        const isSelectAllSelected =
+                          selected.some(
+                            option => option.value === "__ALL__"
+                          );
+                        const allTypeOptions =
+                          ALL_TYPES.map(type => ({
+                            value: type,
+                            label: type
+                          }));
+                        // IF SELECT ALL CLICKED
+                        if (isSelectAllSelected) {
+                          const currentlyAllSelected =
+                            emailActiveTypeFilter.length ===
+                            ALL_TYPES.length;
+                          // TOGGLE ALL
+                          if (currentlyAllSelected) {
+                            setEmailActiveTypeFilter([]);
+                          } else {
+                            setEmailActiveTypeFilter(allTypeOptions);
+                          }
+                          return;
+                        }
+                        // NORMAL MULTI SELECT
+                        setEmailActiveTypeFilter(selected);
+                      }}
                   placeholder="Filter types..."
                   className="text-sm"
                   styles={{

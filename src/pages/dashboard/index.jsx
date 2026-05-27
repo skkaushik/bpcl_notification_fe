@@ -412,8 +412,21 @@ const Dashboard = () => {
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
   const [ageDayFilter, setAgeDayFilter] = useState('');
-  const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
-
+ const ALL_TYPES = [
+  'M1',
+  'M2',
+  'M3',
+  'M4',
+  'M5',
+  'M6',
+  'M7',
+  'M8',
+  'M9'
+];
+const SELECT_ALL_OPTION = {
+  value: "__ALL__",
+  label: "Select All"
+};
   // Derive the actual type key from rawData once
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -797,20 +810,94 @@ const Dashboard = () => {
     Option: InputOption,
   }}
   
-  options={ALL_TYPES.map((t) => ({ value: t, label: t }))}
-  value={activeTypeFilter}
-  onChange={(selected) => setActiveTypeFilter(selected || [])}
+  options={[
+  SELECT_ALL_OPTION,
+  ...ALL_TYPES.map((t) => ({
+    value: t,
+    label: t
+  }))
+]}
+  value={(() => {
+  const allSelected =
+    activeTypeFilter.length === ALL_TYPES.length;
+  if (allSelected) {
+    return [
+      SELECT_ALL_OPTION,
+      ...activeTypeFilter
+    ];
+  }
+  return activeTypeFilter;
+})()}
+ onChange={(selected, actionMeta) => {
+
+  const allOptions =
+    ALL_TYPES.map((type) => ({
+      value: type,
+      label: type
+    }));
+
+  // NOTHING SELECTED
+  if (!selected || selected.length === 0) {
+    setActiveTypeFilter([]);
+    return;
+  }
+
+  // SELECT ALL CLICKED
+  if (
+    actionMeta.option?.value === "__ALL__"
+  ) {
+
+    const currentlyAllSelected =
+      activeTypeFilter.length ===
+      ALL_TYPES.length;
+
+    // IF ALREADY SELECTED => REMOVE ALL
+    if (currentlyAllSelected) {
+      setActiveTypeFilter([]);
+    }
+
+    // ELSE SELECT ALL
+    else {
+      setActiveTypeFilter(allOptions);
+    }
+
+    return;
+  }
+
+  // REMOVE "__ALL__" FROM NORMAL OPTIONS
+  const filtered =
+    selected.filter(
+      (option) => option.value !== "__ALL__"
+    );
+
+  setActiveTypeFilter(filtered);
+
+}}
   placeholder="Filter type..."
   className="text-sm"
   styles={{
-    control: (base) => ({
-      ...base,
-      minHeight: "42px",
-      borderRadius: "12px",
-      borderColor: "#e2e8f0",
-      boxShadow: "none",
-      "&:hover": { borderColor: "#cbd5e1" },
-    }),
+   control: (base) => ({
+  ...base,
+  minHeight: "42px",
+  maxHeight: "60px",
+  overflowY: "auto",
+  borderRadius: "12px",
+  borderColor: "#e2e8f0",
+  boxShadow: "none",
+  alignItems: "flex-start",
+  paddingTop: "4px",
+  paddingBottom: "4px",
+  "&:hover": {
+    borderColor: "#cbd5e1"
+  },
+  "::-webkit-scrollbar": {
+    width: "6px"
+  },
+  "::-webkit-scrollbar-thumb": {
+    background: "#cbd5e1",
+    borderRadius: "10px"
+  }
+}),
     multiValue: (base) => ({
       ...base,
       borderRadius: "8px",
@@ -846,6 +933,21 @@ const Dashboard = () => {
       "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" },
       "::-webkit-scrollbar-thumb:hover": { background: "#94a3b8" },
     }),
+    valueContainer: (base) => ({
+  ...base,
+  maxHeight: "80px",
+  overflowY: "auto",
+  flexWrap: "wrap",
+
+  "::-webkit-scrollbar": {
+    width: "6px"
+  },
+
+  "::-webkit-scrollbar-thumb": {
+    background: "#cbd5e1",
+    borderRadius: "10px"
+  }
+}),
   }}
 />
             </div>
