@@ -921,6 +921,19 @@ const Dashboard = () => {
                       }}
                       barCategoryGap={18}
                     >
+                      {/* Gradient */}
+                      <defs>
+                        <linearGradient
+                          id="notificationBarGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop offset="0%" stopColor="#38bdf8" />
+                          <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                      </defs>
 
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -939,17 +952,6 @@ const Dashboard = () => {
                           <g transform={`translate(${x},${y})`}>
 
                             {/* MR MS Row */}
-
-                            <text
-                              x={18}
-                              y={18}
-                              textAnchor="middle"
-                              fill="#f59e0b"
-                              fontSize="11"
-                              fontWeight="700"
-                            >
-                              MR
-                            </text>
                             <text
                               x={-18}
                               y={18}
@@ -960,9 +962,18 @@ const Dashboard = () => {
                             >
                               MS
                             </text>
+                            <text
+                              x={18}
+                              y={18}
+                              textAnchor="middle"
+                              fill="#f59e0b"
+                              fontSize="11"
+                              fontWeight="700"
+                            >
+                              MR
+                            </text>
 
                             {/* UNIT NAME */}
-
                             <text
                               x={0}
                               y={38}
@@ -973,9 +984,7 @@ const Dashboard = () => {
                             >
                               {payload.value}
                             </text>
-
                           </g>
-
                         )}
                       />
                       <YAxis
@@ -998,27 +1007,23 @@ const Dashboard = () => {
                         }}
                       />
                       <Bar
-                        dataKey="MR"
-                        fill="#f59e0b"
-                        radius={[10, 10, 0, 0]}
-                        barSize={28}
-                      />
-
-                      <Bar
                         dataKey="MS"
-                        fill="#2563eb"
+                        fill="url(#notificationBarGradient)"
                         radius={[10, 10, 0, 0]}
                         barSize={28}
                       />
-
+                      <Bar
+                        dataKey="MR"
+                        fill="#f59e0b"          
+                        radius={[10, 10, 0, 0]}
+                        barSize={28}
+                      />
                     </BarChart>
 
                   </ResponsiveContainer>
-
                 </div>
               </div>
             </>
-
           </div>
           {/* Main Content Grid */}
           <div className="mt-8 grid gap-8 lg:grid-cols-3">

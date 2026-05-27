@@ -104,6 +104,19 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
                 data={chartData}
                 margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
               >
+                {/* Gradient */}
+              <defs>
+                <linearGradient
+                  id="notificationBarGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+              </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis 
                   dataKey="label" 
@@ -118,7 +131,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
                   formatter={(value, name, props) => [value, `Notifications (${props.payload.type})`]}
                   labelFormatter={(label) => label.split('-')[0]}
                 />
-                <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <Bar dataKey="count"  fill="url(#notificationBarGradient)" radius={[4, 4, 0, 0]} maxBarSize={30}>
                   <LabelList dataKey="count" position="top" fill="#0f172a" fontSize={11} fontWeight={700} />
                 </Bar>
               </BarChart>
