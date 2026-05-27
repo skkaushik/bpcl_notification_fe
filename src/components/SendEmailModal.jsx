@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import NotificationTypeFilter from './NotificationTypeFilter';
@@ -11,6 +11,17 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
   const [startDateFilter, endDateFilter] =
     dateRange;
   const [ageDayFilter, setAgeDayFilter] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   // Filtered notifications strictly for the email modal
   const emailFilteredNotifications = useMemo(() => {
@@ -118,7 +129,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="mb-2 block text-sm font-bold text-slate-700">
               Date Range
@@ -168,7 +179,9 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Notification Type</label>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              Notification Type
+            </label>
             <NotificationTypeFilter
               value={emailActiveTypeFilter}
               onChange={setEmailActiveTypeFilter}
