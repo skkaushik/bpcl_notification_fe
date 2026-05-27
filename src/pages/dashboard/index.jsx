@@ -5,7 +5,7 @@ import SendEmailModal from "../../components/SendEmailModal";
 import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
-import Select, { components } from "react-select";
+import NotificationTypeFilter, { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
 import {
   ResponsiveContainer,
@@ -339,63 +339,6 @@ const buildDueChartData = (data = []) => {
   return Object.values(groupedData);
 
 };
-const InputOption = ({
-  getStyles,
-  Icon,
-  isDisabled,
-  isFocused,
-  isSelected,
-  children,
-  innerProps,
-  ...rest
-}) => {
-  const [isActive, setIsActive] = useState(false);
-  const onMouseDown = () => setIsActive(true);
-  const onMouseUp = () => setIsActive(false);
-  const onMouseLeave = () => setIsActive(false);
-
-  // Style the option container
-  let bg = "transparent";
-  if (isFocused) bg = "#f8fafc";
-  if (isActive) bg = "#f1f5f9";
-
-  const style = {
-    alignItems: "center",
-    backgroundColor: bg,
-    color: "inherit",
-    display: "flex ",
-    padding: "8px 12px",
-    cursor: "pointer",
-  };
-
-  const props = {
-    ...innerProps,
-    onMouseDown,
-    onMouseUp,
-    onMouseLeave,
-    style,
-  };
-
-  return (
-    <components.Option
-      {...rest}
-      isDisabled={isDisabled}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      getStyles={getStyles}
-      innerProps={props}
-    >
-      <input 
-        type="checkbox" 
-        checked={isSelected} 
-        readOnly 
-        className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-      />
-      <span className="text-sm font-medium text-slate-700">{children}</span>
-    </components.Option>
-  );
-};
-
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showGlobalEmailModal, setShowGlobalEmailModal] = useState(false);
@@ -408,25 +351,7 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
-  const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
-  const [ageDayFilter, setAgeDayFilter] = useState('');
- const ALL_TYPES = [
-  'M1',
-  'M2',
-  'M3',
-  'M4',
-  'M5',
-  'M6',
-  'M7',
-  'M8',
-  'M9'
-];
-const SELECT_ALL_OPTION = {
-  value: "__ALL__",
-  label: "Select All"
-};
+  
   // Derive the actual type key from rawData once
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -480,82 +405,6 @@ const SELECT_ALL_OPTION = {
     return result;
   }, [notifications, activeTypeFilter]);
 
-  // Filtered notifications strictly for the email modal
-  const emailFilteredNotifications = useMemo(() => {
-    let result = notifications.filter(n => {
-      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
-      return rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
-    });
-
-    if (emailActiveTypeFilter.length > 0) {
-      const selectedValues = emailActiveTypeFilter.map((item) => item.value);
-      result = result.filter((n) =>
-        selectedValues.includes(
-          String(n.type ?? '').trim().toUpperCase().replace(/\s+/g, '')
-        )
-      );
-    }
-
-    if (startDateFilter || endDateFilter || ageDayFilter) {
-      const today = new Date();
-
-      result = result.filter(n => {
-        let passDate = true;
-        let passAge = true;
-        const notifDate = n.notifDate && n.notifDate !== 'N/A' ? new Date(n.notifDate) : null;
-
-        if (notifDate && !isNaN(notifDate)) {
-          if (startDateFilter) {
-            passDate = passDate && (notifDate >= new Date(startDateFilter));
-          }
-          if (endDateFilter) {
-            passDate = passDate && (notifDate <= new Date(endDateFilter));
-          }
-
-          if (ageDayFilter) {
-            const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
-            passAge = ageDays >= parseInt(ageDayFilter, 10);
-          }
-        } else {
-          passDate = false;
-        }
-
-        return passDate && passAge;
-      });
-    }
-
-    return result;
-  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageDayFilter]);
-
-  const emailGroups = useMemo(() => {
-    const groups = {};
-    emailFilteredNotifications.forEach(notif => {
-      const type = String(notif.type ?? '').trim().toUpperCase();
-      const rawUnit = String(notif.workCtr ?? '').trim().toUpperCase();
-      const status = String(notif.status ?? '').trim().toUpperCase();
-      let prefix = ''; let plantName = rawUnit;
-      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
-        prefix = rawUnit.substring(0, 2);
-        plantName = rawUnit.substring(2).trim();
-      }
-      const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
-      if (plantConfig) {
-        const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-        const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
-        let targetEmail = '';
-        if (isProcessType && isProcessStatus) targetEmail = plantConfig.processEmail;
-        else if (prefix === 'MR') targetEmail = plantConfig.rotaryMail;
-        else if (prefix === 'MS') targetEmail = plantConfig.staticMail;
-        else targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
-
-        if (targetEmail) {
-          if (!groups[targetEmail]) groups[targetEmail] = [];
-          groups[targetEmail].push(notif.id);
-        }
-      }
-    });
-    return groups;
-  }, [filteredNotifications]);
 
   const dueChartData = useMemo(() => {
     return buildDueChartData(filteredRawData);
@@ -627,7 +476,7 @@ const SELECT_ALL_OPTION = {
 
     if (plantConfig) {
       const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
+      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO') || status.includes('JBPR');
 
       if (isProcessType && isProcessStatus) {
         targetEmail = plantConfig.processEmail;
@@ -749,13 +598,7 @@ const SELECT_ALL_OPTION = {
           return {
             id: row[notificationKey] || `N-${idx + 1}`,
             equip: row[equipmentKey] || 'Unknown equipment',
-            status: (() => {
-              const raw = String(row[statusKey] || '').toUpperCase();
-              if (raw.includes('APRD')) return 'Approved';
-              if (raw.includes('APRE')) return 'Pending';
-              if (raw.includes('NOPR')) return 'In Progress';
-              return raw || 'Pending';
-            })(),
+            status: String(row[statusKey] || '').toUpperCase().trim() || 'N/A',
             type: row[typeKey] || 'N/A',
             workCtr: row[workCtrKey] || 'N/A',
             requiredEnd: parseDate(row[requiredEndKey]),
@@ -801,155 +644,10 @@ const SELECT_ALL_OPTION = {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto justify-end">
           {rawData.length > 0 && (
             <div className="w-full sm:w-64">
-              <Select
-  isMulti
-  // Essential for Multi-Select UX:
-  closeMenuOnSelect={false} 
-  hideSelectedOptions={false}
-  components={{
-    Option: InputOption,
-  }}
-  
-  options={[
-  SELECT_ALL_OPTION,
-  ...ALL_TYPES.map((t) => ({
-    value: t,
-    label: t
-  }))
-]}
-  value={(() => {
-  const allSelected =
-    activeTypeFilter.length === ALL_TYPES.length;
-  if (allSelected) {
-    return [
-      SELECT_ALL_OPTION,
-      ...activeTypeFilter
-    ];
-  }
-  return activeTypeFilter;
-})()}
- onChange={(selected, actionMeta) => {
-
-  const allOptions =
-    ALL_TYPES.map((type) => ({
-      value: type,
-      label: type
-    }));
-
-  // NOTHING SELECTED
-  if (!selected || selected.length === 0) {
-    setActiveTypeFilter([]);
-    return;
-  }
-
-  // SELECT ALL CLICKED
-  if (
-    actionMeta.option?.value === "__ALL__"
-  ) {
-
-    const currentlyAllSelected =
-      activeTypeFilter.length ===
-      ALL_TYPES.length;
-
-    // IF ALREADY SELECTED => REMOVE ALL
-    if (currentlyAllSelected) {
-      setActiveTypeFilter([]);
-    }
-
-    // ELSE SELECT ALL
-    else {
-      setActiveTypeFilter(allOptions);
-    }
-
-    return;
-  }
-
-  // REMOVE "__ALL__" FROM NORMAL OPTIONS
-  const filtered =
-    selected.filter(
-      (option) => option.value !== "__ALL__"
-    );
-
-  setActiveTypeFilter(filtered);
-
-}}
-  placeholder="Filter type..."
-  className="text-sm"
-  styles={{
-   control: (base) => ({
-  ...base,
-  minHeight: "42px",
-  maxHeight: "60px",
-  overflowY: "auto",
-  borderRadius: "12px",
-  borderColor: "#e2e8f0",
-  boxShadow: "none",
-  alignItems: "flex-start",
-  paddingTop: "4px",
-  paddingBottom: "4px",
-  "&:hover": {
-    borderColor: "#cbd5e1"
-  },
-  "::-webkit-scrollbar": {
-    width: "6px"
-  },
-  "::-webkit-scrollbar-thumb": {
-    background: "#cbd5e1",
-    borderRadius: "10px"
-  }
-}),
-    multiValue: (base) => ({
-      ...base,
-      borderRadius: "8px",
-      backgroundColor: "#eef2ff",
-      padding: "2px 4px",
-    }),
-    multiValueLabel: (base) => ({
-      ...base,
-      color: "#4f46e5",
-      fontWeight: 700,
-    }),
-    multiValueRemove: (base) => ({
-      ...base,
-      color: "#4f46e5",
-      ":hover": {
-        backgroundColor: "#e0e7ff",
-        color: "#4338ca",
-        borderRadius: "6px",
-      },
-    }),
-    menu: (base) => ({
-      ...base,
-      borderRadius: "12px",
-      overflow: "hidden",
-      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-      border: "1px solid #e2e8f0",
-    }),
-    menuList: (base) => ({
-      ...base,
-      padding: "4px",
-      "::-webkit-scrollbar": { width: "8px" },
-      "::-webkit-scrollbar-track": { background: "transparent" },
-      "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" },
-      "::-webkit-scrollbar-thumb:hover": { background: "#94a3b8" },
-    }),
-    valueContainer: (base) => ({
-  ...base,
-  maxHeight: "80px",
-  overflowY: "auto",
-  flexWrap: "wrap",
-
-  "::-webkit-scrollbar": {
-    width: "6px"
-  },
-
-  "::-webkit-scrollbar-thumb": {
-    background: "#cbd5e1",
-    borderRadius: "10px"
-  }
-}),
-  }}
-/>
+              <NotificationTypeFilter
+                value={activeTypeFilter}
+                onChange={setActiveTypeFilter}
+              />
             </div>
           )}
           <button
