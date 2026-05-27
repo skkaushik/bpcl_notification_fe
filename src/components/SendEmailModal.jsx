@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
 import { emailConfig } from '../data/emailConfig';
 
@@ -6,8 +8,10 @@ const ALL_TYPES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
+  const [dateRange, setDateRange] = useState([null, null]);
+  const datePickerRef = useRef(null);
+  const [startDateFilter, endDateFilter] =
+  dateRange;
   const [ageDayFilter, setAgeDayFilter] = useState('');
 
   // Filtered notifications strictly for the email modal
@@ -36,12 +40,19 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
         
         if (notifDate && !isNaN(notifDate)) {
           if (startDateFilter) {
-            passDate = passDate && (notifDate >= new Date(startDateFilter));
+            const start = new Date(startDateFilter);
+            start.setHours(0, 0, 0, 0);
+            passDate =
+              passDate &&
+              notifDate >= start;
           }
           if (endDateFilter) {
-            passDate = passDate && (notifDate <= new Date(endDateFilter));
+            const end = new Date(endDateFilter);
+            end.setHours(23, 59, 59, 999);
+            passDate =
+              passDate &&
+              notifDate <= end;
           }
-          
           if (ageDayFilter) {
             const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
             passAge = ageDays >= parseInt(ageDayFilter, 10);
@@ -110,26 +121,52 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
             </div>
 
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Date Range</label>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="date" 
-                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200" 
-                    value={startDateFilter}
-                    onChange={(e) => setStartDateFilter(e.target.value)}
-                    title="Start Date"
-                  />
-                  <span className="text-slate-400">-</span>
-                  <input 
-                    type="date" 
-                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200" 
-                    value={endDateFilter}
-                    onChange={(e) => setEndDateFilter(e.target.value)}
-                    title="End Date"
-                  />
-                </div>
-              </div>
+             <div>
+  <label className="mb-2 block text-sm font-bold text-slate-700">
+    Date Range
+  </label>
+  <div className="relative w-full">
+    <DatePicker
+      ref={datePickerRef}
+      selectsRange
+      startDate={startDateFilter}
+      endDate={endDateFilter}
+      onChange={(update) => {
+        setDateRange(update);
+      }}
+      maxDate={new Date()}
+      dateFormat="dd-MM-yyyy"
+      placeholderText="dd-mm-yyyy - dd-mm-yyyy"
+      className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-3 pr-20 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      isClearable
+      wrapperClassName="w-full"
+    />
+
+    {/* Calendar Icon */}
+
+    <button
+      type="button"
+      onClick={() => {
+        datePickerRef.current?.setOpen(true);
+      }}
+      className="absolute inset-y-0 right-9 flex items-center pr-4 text-slate-400 transition hover:text-indigo-600"
+    >
+      <svg
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"
+        />
+      </svg>
+    </button>
+    </div>
+</div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Age (Older than X days)</label>
                 <input 
