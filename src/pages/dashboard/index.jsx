@@ -2,6 +2,7 @@ import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
 import UnitWiseBarChart from "../../components/UnitWiseBarChart";
 import SendEmailModal from "../../components/SendEmailModal";
+import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import Select from "react-select";
@@ -867,9 +868,12 @@ const Dashboard = () => {
             ))}
           </div>
           {/* Charts Grid */}
-          <div className="mt-8">
+          <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
               <NotificationTypeBarChart data={filteredRawData} />
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden flex flex-col items-center justify-center">
+              <MrMsPieChart data={filteredRawData} />
             </div>
           </div>
 
