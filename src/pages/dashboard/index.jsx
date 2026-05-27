@@ -5,7 +5,7 @@ import SendEmailModal from "../../components/SendEmailModal";
 import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
-import Select from "react-select";
+import Select, { components } from "react-select";
 import { emailConfig } from "../../data/emailConfig";
 import {
   ResponsiveContainer,
@@ -339,7 +339,62 @@ const buildDueChartData = (data = []) => {
   return Object.values(groupedData);
 
 };
+const InputOption = ({
+  getStyles,
+  Icon,
+  isDisabled,
+  isFocused,
+  isSelected,
+  children,
+  innerProps,
+  ...rest
+}) => {
+  const [isActive, setIsActive] = useState(false);
+  const onMouseDown = () => setIsActive(true);
+  const onMouseUp = () => setIsActive(false);
+  const onMouseLeave = () => setIsActive(false);
 
+  // Style the option container
+  let bg = "transparent";
+  if (isFocused) bg = "#f8fafc";
+  if (isActive) bg = "#f1f5f9";
+
+  const style = {
+    alignItems: "center",
+    backgroundColor: bg,
+    color: "inherit",
+    display: "flex ",
+    padding: "8px 12px",
+    cursor: "pointer",
+  };
+
+  const props = {
+    ...innerProps,
+    onMouseDown,
+    onMouseUp,
+    onMouseLeave,
+    style,
+  };
+
+  return (
+    <components.Option
+      {...rest}
+      isDisabled={isDisabled}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      getStyles={getStyles}
+      innerProps={props}
+    >
+      <input 
+        type="checkbox" 
+        checked={isSelected} 
+        readOnly 
+        className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+      />
+      <span className="text-sm font-medium text-slate-700">{children}</span>
+    </components.Option>
+  );
+};
 
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -734,18 +789,65 @@ const Dashboard = () => {
           {rawData.length > 0 && (
             <div className="w-full sm:w-64">
               <Select
-                isMulti
-                options={ALL_TYPES.map(t => ({ value: t, label: t }))}
-                value={activeTypeFilter}
-                onChange={(selected) => setActiveTypeFilter(selected || [])}
-                placeholder="Filter type..."
-                className="text-sm"
-                styles={{
-                  control: (base) => ({ ...base, minHeight: '42px', borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: 'none' }),
-                  multiValue: (base) => ({ ...base, borderRadius: '8px', backgroundColor: '#eef2ff' }),
-                  multiValueLabel: (base) => ({ ...base, color: '#4f46e5', fontWeight: 700 }),
-                }}
-              />
+  isMulti
+  // Essential for Multi-Select UX:
+  closeMenuOnSelect={false} 
+  hideSelectedOptions={false}
+  components={{
+    Option: InputOption,
+  }}
+  
+  options={ALL_TYPES.map((t) => ({ value: t, label: t }))}
+  value={activeTypeFilter}
+  onChange={(selected) => setActiveTypeFilter(selected || [])}
+  placeholder="Filter type..."
+  className="text-sm"
+  styles={{
+    control: (base) => ({
+      ...base,
+      minHeight: "42px",
+      borderRadius: "12px",
+      borderColor: "#e2e8f0",
+      boxShadow: "none",
+      "&:hover": { borderColor: "#cbd5e1" },
+    }),
+    multiValue: (base) => ({
+      ...base,
+      borderRadius: "8px",
+      backgroundColor: "#eef2ff",
+      padding: "2px 4px",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: "#4f46e5",
+      fontWeight: 700,
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      color: "#4f46e5",
+      ":hover": {
+        backgroundColor: "#e0e7ff",
+        color: "#4338ca",
+        borderRadius: "6px",
+      },
+    }),
+    menu: (base) => ({
+      ...base,
+      borderRadius: "12px",
+      overflow: "hidden",
+      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      border: "1px solid #e2e8f0",
+    }),
+    menuList: (base) => ({
+      ...base,
+      padding: "4px",
+      "::-webkit-scrollbar": { width: "8px" },
+      "::-webkit-scrollbar-track": { background: "transparent" },
+      "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" },
+      "::-webkit-scrollbar-thumb:hover": { background: "#94a3b8" },
+    }),
+  }}
+/>
             </div>
           )}
           <button
