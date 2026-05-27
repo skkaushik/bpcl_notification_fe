@@ -1,19 +1,20 @@
-const Header = ({ onMenuClick }) => {
+const Header = () => {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-blue-100 backdrop-blur-md px-4 sm:px-8 py-4 sm:py-6">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
-          {/* Hamburger button for mobile */}
-          <button 
-            onClick={onMenuClick}
-            className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-200 rounded-lg"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-
-          <div className="relative w-full max-w-md">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-            </span>
+        <div className="flex items-center gap-4 w-full sm:w-auto flex-1">
+          {/* Logo and Brand Name */}
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
+              <img
+                src="/logo.png"
+                alt="Notification Analytics Logo"
+                className="h-full w-full rounded-xl"
+              />
+            </div>
+            <h1 className="text-lg sm:text-xl font-black leading-none tracking-tight text-slate-900">
+              Notifications Analytics
+            </h1>
           </div>
         </div>
 

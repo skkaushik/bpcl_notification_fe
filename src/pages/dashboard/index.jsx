@@ -430,12 +430,12 @@ const Dashboard = () => {
 
     if (startDateFilter || endDateFilter || ageDayFilter) {
       const today = new Date();
-      
+
       result = result.filter(n => {
         let passDate = true;
         let passAge = true;
         const notifDate = n.notifDate && n.notifDate !== 'N/A' ? new Date(n.notifDate) : null;
-        
+
         if (notifDate && !isNaN(notifDate)) {
           if (startDateFilter) {
             passDate = passDate && (notifDate >= new Date(startDateFilter));
@@ -443,7 +443,7 @@ const Dashboard = () => {
           if (endDateFilter) {
             passDate = passDate && (notifDate <= new Date(endDateFilter));
           }
-          
+
           if (ageDayFilter) {
             const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
             passAge = ageDays >= parseInt(ageDayFilter, 10);
@@ -451,7 +451,7 @@ const Dashboard = () => {
         } else {
           passDate = false;
         }
-        
+
         return passDate && passAge;
       });
     }
@@ -545,22 +545,22 @@ const Dashboard = () => {
     const type = String(notification.type ?? '').trim().toUpperCase();
     const rawUnit = String(notification.workCtr ?? '').trim().toUpperCase();
     const status = String(notification.status ?? '').trim().toUpperCase();
-    
+
     let prefix = '';
     let plantName = rawUnit;
-    
+
     if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
       prefix = rawUnit.substring(0, 2);
       plantName = rawUnit.substring(2).trim();
     }
-  
+
     const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
     let targetEmail = '';
-  
+
     if (plantConfig) {
       const isProcessType = ['M1', 'M2', 'M6'].includes(type);
       const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO');
-      
+
       if (isProcessType && isProcessStatus) {
         targetEmail = plantConfig.processEmail;
       } else if (prefix === 'MR') {
@@ -572,7 +572,7 @@ const Dashboard = () => {
         targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
       }
     }
-  
+
     if (targetEmail) {
       const subject = encodeURIComponent(`Notification Alert: ${notification.id} - ${notification.equip}`);
       const body = encodeURIComponent(`Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`);
@@ -728,8 +728,7 @@ const Dashboard = () => {
       {/* Breadcrumbs & Actions */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Hi, Welcome back 👋</h2>
-          <p className="mt-1 text-sm sm:text-base text-slate-500 font-medium">Real-time monitoring</p>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Dashboard</h2>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto justify-end">
           {rawData.length > 0 && (
@@ -1014,7 +1013,7 @@ const Dashboard = () => {
                       />
                       <Bar
                         dataKey="MR"
-                        fill="#f59e0b"          
+                        fill="#f59e0b"
                         radius={[10, 10, 0, 0]}
                         barSize={28}
                       />
@@ -1322,7 +1321,7 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Global Email Modal */}
       <SendEmailModal
         isOpen={showGlobalEmailModal}
