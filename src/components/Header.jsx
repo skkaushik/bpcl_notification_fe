@@ -1,4 +1,49 @@
-const Header = () => {
+import React, { useState, useRef, useEffect } from 'react';
+import { BsStars } from 'react-icons/bs';
+
+const Header = ({ hasData = false }) => {
+  const [showAIProviderMenu, setShowAIProviderMenu] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [providerForKey, setProviderForKey] = useState(null);
+  const [keyInput, setKeyInput] = useState('');
+  
+  const aiMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
+        setShowAIProviderMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleProviderSelect = (provider) => {
+    setShowAIProviderMenu(false);
+    
+    let key = localStorage.getItem(`ai_key_${provider}`);
+    if (!key) {
+      setProviderForKey(provider);
+      setKeyInput('');
+      setShowKeyModal(true);
+      return;
+    }
+    
+    window.dispatchEvent(new CustomEvent('open-ai-widget', {
+      detail: { provider, apiKey: key }
+    }));
+  };
+
+  const handleKeySubmit = () => {
+    if (keyInput.trim()) {
+      localStorage.setItem(`ai_key_${providerForKey}`, keyInput.trim());
+      setShowKeyModal(false);
+      window.dispatchEvent(new CustomEvent('open-ai-widget', {
+        detail: { provider: providerForKey, apiKey: keyInput.trim() }
+      }));
+    }
+  };
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-blue-100/90 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3">
       <div className="flex items-center justify-between gap-4">
@@ -19,10 +64,39 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <button className="relative rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50 transition-colors">
-            <div className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500 border border-white" />
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 0 0-4-5.659V5a2 2 0 0 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 0 1-6 0"/></svg>
-          </button>
+          {hasData && (
+            <div className="relative" ref={aiMenuRef}>
+              <button 
+                onClick={() => setShowAIProviderMenu(!showAIProviderMenu)}
+                className="relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
+              >
+                <div className="flex items-center gap-2 px-5 py-1.5 bg-white rounded-full h-full w-full">
+                  <BsStars size={18} className="text-orange-500" />
+                  <span className="text-sm font-bold text-slate-800">Ask AI</span>
+                </div>
+              </button>
+              
+              {showAIProviderMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 overflow-hidden">
+                  <div className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Select Provider</div>
+                  <button 
+                    onClick={() => handleProviderSelect('openai')}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors"
+                  >
+                    OpenAI (GPT-4o)
+                  </button>
+                  <button 
+                    onClick={() => handleProviderSelect('gemini')}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors"
+                  >
+                    Google Gemini
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+
           <div className="hidden sm:block h-6 w-px bg-slate-200" />
           <div className="flex items-center gap-2">
             <div className="hidden sm:block text-right leading-tight">
@@ -35,6 +109,51 @@ const Header = () => {
           </div>
         </div>
       </div>
+
+      {/* Custom Key Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in border border-slate-200">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                Enter {providerForKey === 'openai' ? 'OpenAI' : 'Gemini'} API Key
+              </h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Your key will be securely saved in your browser's local storage and used to communicate directly with the AI provider.
+              </p>
+              
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">API Key</label>
+                <input 
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 text-slate-800 font-mono text-sm"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleKeySubmit()}
+                />
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3">
+                <button 
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleKeySubmit}
+                  disabled={!keyInput.trim()}
+                  className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 transition-all"
+                >
+                  Save & Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

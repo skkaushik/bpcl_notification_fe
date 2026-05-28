@@ -455,6 +455,10 @@ const Dashboard = () => {
   }, [rawData]);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent('data-loaded', { detail: rawData }));
+  }, [rawData]);
+
+  useEffect(() => {
     if (selectedNotification) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -651,7 +655,7 @@ const Dashboard = () => {
     }
   };
   return (
-    <Layout>
+    <Layout hasData={rawData.length > 0}>
       {/* Breadcrumbs & Actions */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
         <div>
