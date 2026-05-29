@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import NotificationTypeFilter, { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
+import DataTable from "../../components/DataTable";
 import {
   ResponsiveContainer,
   BarChart,
@@ -34,6 +35,21 @@ const findKey = (row = {}, targets = []) => {
     if (found) return found;
   }
   return undefined;
+};
+const formatExcelDate = (val) => {
+  if (!val) return 'N/A';
+  let d;
+  if (val instanceof Date) {
+    d = val;
+  } else if (typeof val === 'number') {
+    // Convert Excel serial to JS Date
+    d = new Date((val - 25569) * 86400 * 1000);
+  } else {
+    d = new Date(String(val).trim());
+  }
+  if (isNaN(d)) return String(val);
+  // Returns format: DD-MM-YYYY
+  return d.toLocaleDateString('en-GB').replace(/\//g, '-');
 };
 const calculateKpiStats = (data = []) => {
   const sample = data[0] || {};
@@ -344,6 +360,7 @@ const buildDueChartData = (data = []) => {
   return Object.values(groupedData);
 
 };
+
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showGlobalEmailModal, setShowGlobalEmailModal] = useState(false);
@@ -414,7 +431,69 @@ const Dashboard = () => {
   const dueChartData = useMemo(() => {
     return buildDueChartData(filteredRawData);
   }, [filteredRawData]);
+ const criticalEquipmentData = useMemo(() => {
+  if (!rawData.length) return [];
 
+  const sample = rawData[0];
+  const equipmentKey = findKey(sample, ["Equipment", "Equipment ID", "Equip"]);
+  const typeKey = findKey(sample, ["Notifictn type", "Notification Type", "Type"]);
+  const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr"]);
+  const dateKey = findKey(sample, ["Notif.date", "Notification Date", "Date"]);
+  const notificationIdKey = findKey(sample, ["Notification", "Notification No"]);
+  const statusKey = findKey(sample, ["Status", "User status"]);
+  const descriptionKey = findKey(sample, ["Description"]);
+
+  if (!equipmentKey || !workCtrKey) return [];
+
+  // 1. Pass 1: Count occurrences of Equipment IDs for MR/MS units
+  const equipmentCounts = {};
+  rawData.forEach((row) => {
+    const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
+    if (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) {
+      const id = String(row[equipmentKey] || "").trim();
+      if (id) equipmentCounts[id] = (equipmentCounts[id] || 0) + 1;
+    }
+  });
+
+  // 2. Pass 2: Keep EVERY row where the equipment ID appeared more than once
+  return rawData
+    .filter((row) => {
+      const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
+      const equipmentId = String(row[equipmentKey] || "").trim();
+      return (
+        (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) &&
+        equipmentCounts[equipmentId] > 1
+      );
+    })
+    .map((row) => ({
+      ...row,
+      // Map display fields
+      displayId: row[notificationIdKey] || "N/A",
+      displayEquipId: row[equipmentKey],
+      displayType: row[typeKey],
+      displayUnitType: String(row[workCtrKey]).toUpperCase().startsWith("MR") ? "MR" : "MS",
+      displayDate: formatExcelDate(row[dateKey]),
+      displayStatus: row[statusKey] || "N/A",
+      displayDesc: row[descriptionKey] || "No description provided",
+    }));
+}, [rawData]);
+const criticalEquipmentColumns = [
+  { header: "Equipment ID", key: "displayEquipId" },
+  { header: "Notification Type", key: "displayType" },
+  { header: "Unit Type", key: "displayUnitType" },
+  {
+    header: "Details",
+    key: "history_action",
+    render: (row) => (
+      <button
+        onClick={() => setSelectedEquipment(row)}
+        className="rounded-lg bg-indigo-100 px-4 py-1 text-sm font-bold text-indigo-700 hover:bg-indigo-200"
+      >
+        View Details
+      </button>
+    ),
+  },
+];
   const [stats, setStats] = useState({
     totalNotifications: '0',
     notif15Days: '0',
@@ -424,6 +503,8 @@ const Dashboard = () => {
     impactedUnits: '0',
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const rowsPerPage = 10;
   const [unitPerformance, setUnitPerformance] = useState([
     { name: 'Unit 1', val: 85, color: 'bg-indigo-600' },
@@ -659,7 +740,33 @@ const Dashboard = () => {
       {/* Breadcrumbs & Actions */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Dashboard</h2>
+          <div className="flex items-center gap-4">
+
+  <button
+    onClick={() => setActiveView("dashboard")}
+    className={`text-5xl font-bold ${
+      activeView === "dashboard"
+        ? "text-indigo-600"
+        : "text-slate-500"
+    }`}
+  >
+    Dashboard
+  </button>
+
+  <span>|</span>
+
+  <button
+    onClick={() => setActiveView("critical")}
+    className={`text-5xl font-bold ${
+      activeView === "critical"
+        ? "text-indigo-600"
+        : "text-slate-500"
+    }`}
+  >
+    Critical Equipment
+  </button>
+
+</div>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto justify-end">
           {rawData.length > 0 && (
@@ -727,8 +834,8 @@ const Dashboard = () => {
         </div>
       )}
       {rawData.length > 0 ? (
+       activeView === "dashboard" ? (
         <>
-
           {/* KPI Stats */}
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {[
@@ -809,9 +916,7 @@ const Dashboard = () => {
           </div>
 
           {/* Total Due Notifications Chart */}
-
           <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
-
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
@@ -822,7 +927,6 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-
             <div className="w-full">
               <div className="w-full h-[320px] sm:h-[470px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -851,8 +955,27 @@ const Dashboard = () => {
           </div>
           {/* Main Content Grid */}
           <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          </div>        </>
+          </div>        
+          </>
       ) : (
+
+  <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+
+    <h2 className="mb-4 text-2xl font-bold">
+      Critical Equipment
+    </h2>
+
+    <DataTable
+      columns={criticalEquipmentColumns}
+      data={criticalEquipmentData}
+      tableHeight="650px"
+      emptyMessage="No critical equipment found"
+    />
+
+  </div>
+  )
+
+): (
         <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
           {/* Icon */}
           <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
@@ -890,8 +1013,7 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-      )
-      }
+      )}
       {selectedNotification && (
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -1041,6 +1163,56 @@ const Dashboard = () => {
         </div>
 
       )}
+      {selectedEquipment && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
+      <div className="mb-6 flex items-center justify-between border-b pb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Equipment Details</h2>
+          <p className="text-indigo-600 font-semibold">Equipment: {selectedEquipment.displayEquipId}</p>
+        </div>
+        <button onClick={() => setSelectedEquipment(null)} className="rounded-full bg-slate-100 p-2 hover:bg-slate-200">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Notification ID</p>
+            <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayId}</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Date</p>
+            <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayDate}</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Type</p>
+            <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayType}</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Status</p>
+            <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayStatus}</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+          <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Description</p>
+          <p className="text-sm text-slate-700 leading-relaxed">{selectedEquipment.displayDesc}</p>
+        </div>
+      </div>
+
+      <div className="mt-8 flex justify-end">
+        <button
+          onClick={() => setSelectedEquipment(null)}
+          className="rounded-xl bg-slate-900 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-800 transition-all"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       {/* Upload Dialog Modal */}
       {showUploadDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
