@@ -20,7 +20,7 @@ const DataTable = ({
             <tr>
 
               {columns.map((column) => (
-                <th
+                <th className="relative"
                   key={column.key}
                   className="border-b px-4 py-3 text-left text-sm font-semibold text-slate-700"
                 >

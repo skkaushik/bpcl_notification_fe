@@ -8,6 +8,8 @@ import * as XLSX from "xlsx";
 import NotificationTypeFilter, { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
 import DataTable from "../../components/DataTable";
+// import TableColumnFilter from "../../components/TableColumnFilter";
+import HeaderFilter from "../../components/HeaderFilter";
 import {
   ResponsiveContainer,
   BarChart,
@@ -373,6 +375,9 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
   // Global filter: 'ALL' or one of M1..M9
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
+  const [equipmentFilter, setEquipmentFilter] = useState([]);
+const [notificationTypeFilter, setNotificationTypeFilter] = useState([]);
+const [unitTypeFilter, setUnitTypeFilter] = useState([]);
   
   // Derive the actual type key from rawData once
   const typeKeyInData = useMemo(() => {
@@ -477,10 +482,125 @@ const Dashboard = () => {
       displayDesc: row[descriptionKey] || "No description provided",
     }));
 }, [rawData]);
+const equipmentOptions = useMemo(() => {
+
+  const unique = [
+    ...new Set(
+      criticalEquipmentData.map(
+        item => String(item.displayEquipId)
+      )
+    )
+  ];
+
+  return unique.map(item => ({
+    value: item,
+    label: item
+  }));
+
+}, [criticalEquipmentData]);
+
+const notificationOptions = useMemo(() => {
+
+  const unique = [
+    ...new Set(
+      criticalEquipmentData.map(
+        item => String(item.displayType)
+      )
+    )
+  ];
+
+  return unique.map(item => ({
+    value: item,
+    label: item
+  }));
+
+}, [criticalEquipmentData]);
+
+const unitOptions = useMemo(() => {
+
+  const unique = [
+    ...new Set(
+      criticalEquipmentData.map(
+        item => String(item.displayUnitType)
+      )
+    )
+  ];
+
+  return unique.map(item => ({
+    value: item,
+    label: item
+  }));
+
+}, [criticalEquipmentData]);
+const filteredCriticalEquipmentData = useMemo(() => {
+  return criticalEquipmentData.filter(row => {
+    const equipmentMatch =
+      equipmentFilter.length === 0 ||
+      equipmentFilter.some(
+        item =>
+          item.value ===
+          String(row.displayEquipId)
+      );
+    const typeMatch =
+      notificationTypeFilter.length === 0 ||
+      notificationTypeFilter.some(
+        item =>
+          item.value ===
+          String(row.displayType)
+      );
+    const unitMatch =
+      unitTypeFilter.length === 0 ||
+      unitTypeFilter.some(
+        item =>
+          item.value ===
+          String(row.displayUnitType)
+      );
+    return (
+      equipmentMatch &&
+      typeMatch &&
+      unitMatch
+    );
+  });
+}, [
+  criticalEquipmentData,
+  equipmentFilter,
+  notificationTypeFilter,
+  unitTypeFilter
+]);
 const criticalEquipmentColumns = [
-  { header: "Equipment ID", key: "displayEquipId" },
-  { header: "Notification Type", key: "displayType" },
-  { header: "Unit Type", key: "displayUnitType" },
+ {
+  header: (
+    <HeaderFilter
+      title="Equipment ID"
+      options={equipmentOptions}
+      value={equipmentFilter}
+      onChange={setEquipmentFilter}
+    />
+  ),
+  key: "displayEquipId"
+},
+ {
+  header: (
+    <HeaderFilter
+      title="Notification Type"
+      options={notificationOptions}
+      value={notificationTypeFilter}
+      onChange={setNotificationTypeFilter}
+    />
+  ),
+  key: "displayType"
+},
+ {
+  header: (
+    <HeaderFilter
+      title="Unit Type"
+      options={unitOptions}
+      value={unitTypeFilter}
+      onChange={setUnitTypeFilter}
+    />
+  ),
+  key: "displayUnitType"
+},
   {
     header: "Details",
     key: "history_action",
@@ -964,10 +1084,9 @@ const criticalEquipmentColumns = [
     <h2 className="mb-4 text-2xl font-bold">
       Critical Equipment
     </h2>
-
     <DataTable
-      columns={criticalEquipmentColumns}
-      data={criticalEquipmentData}
+  columns={criticalEquipmentColumns}
+  data={filteredCriticalEquipmentData}
       tableHeight="650px"
       emptyMessage="No critical equipment found"
     />
