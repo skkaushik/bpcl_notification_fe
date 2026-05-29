@@ -74,7 +74,6 @@ const buildChartData = (data) => {
     return acc;
   }, {});
 
-  // Initial chart with zeros
   if (!Array.isArray(data) || data.length === 0) {
     return defaultTypes.map((name) => ({
       name,
@@ -82,7 +81,6 @@ const buildChartData = (data) => {
     }));
   }
 
-  // Detect actual Excel columns
   const typeKey = findNotificationTypeKey(data[0]);
 
   const keys = Object.keys(data[0]);
@@ -95,7 +93,6 @@ const buildChartData = (data) => {
   console.log('Detected Notification Type Key:', typeKey);
   console.log('Detected Notification Key:', notifKey);
 
-  // If columns not found
   if (!typeKey || !notifKey) {
     return defaultTypes.map((name) => ({
       name,
@@ -108,7 +105,6 @@ const buildChartData = (data) => {
     'Unit',
   ]);
 
-  // Count unique Notification IDs per M1-M9 value
   data.forEach((row) => {
     const rawType = String(row[typeKey] ?? '').trim().toUpperCase();
     const normalizedType = rawType.replace(/\s+/g, '');
@@ -119,7 +115,6 @@ const buildChartData = (data) => {
       .trim()
       .toUpperCase();
 
-    // ONLY MR and MS
     if (
       !rawUnit.startsWith('MR') &&
       !rawUnit.startsWith('MS')
@@ -132,7 +127,6 @@ const buildChartData = (data) => {
     }
   });
 
-  // Final chart data
   return defaultTypes.map((name) => ({
     name,
     value: notificationSets[name].size,
@@ -147,7 +141,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
 
   return (
     <div>
-      {/* Header */}
+
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-900">
@@ -160,7 +154,6 @@ const NotificationTypeBarChart = ({ data = [] }) => {
         </div>
       </div>
 
-      {/* Chart */}
       <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="min-w-[600px] h-[300px] sm:h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -173,7 +166,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                 bottom: 0,
               }}
             >
-              {/* Gradient */}
+
               <defs>
                 <linearGradient
                   id="notificationBarGradient"
@@ -187,14 +180,12 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                 </linearGradient>
               </defs>
 
-              {/* Grid */}
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
                 stroke="#e2e8f0"
               />
 
-              {/* X Axis */}
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -207,7 +198,6 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                 tickMargin={12}
               />
 
-              {/* Y Axis */}
               <YAxis
                 axisLine={false}
                 tickLine={false}
@@ -218,7 +208,6 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                 width={40}
               />
 
-              {/* Tooltip */}
               <Tooltip
                 cursor={{
                   fill: 'rgba(15, 23, 42, 0.04)',
@@ -229,7 +218,6 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                 ]}
               />
 
-              {/* Bars */}
               <Bar
                 dataKey="value"
                 fill="url(#notificationBarGradient)"

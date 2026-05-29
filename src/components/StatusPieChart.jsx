@@ -16,7 +16,7 @@ const StatusPieChart = ({ data = [] }) => {
     
     const counts = {};
     data.forEach((row) => {
-      // Access the status property correctly assuming the objects passed here are the mapped notifications
+
       const status = row.status || 'Unknown';
       counts[status] = (counts[status] || 0) + 1;
     });

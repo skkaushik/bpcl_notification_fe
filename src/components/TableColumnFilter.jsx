@@ -40,10 +40,10 @@ const InputOption = ({
       innerProps={props}
     >
       <div className={`flex items-center w-full px-3 py-2 cursor-pointer transition-colors ${bgClass}`}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          readOnly
+        <input 
+          type="checkbox" 
+          checked={isSelected} 
+          readOnly 
           className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
         />
         <span className="text-sm font-medium">{children}</span>
@@ -59,30 +59,46 @@ const CustomMultiValue = (props) => {
   return <components.MultiValue {...props} />;
 };
 
-const NotificationTypeFilter = ({ value = [], onChange, placeholder = "Filter type...", className = "text-sm", wrapperClassName = "" }) => {
-  const allOptions = ALL_TYPES.map((type) => ({
-    value: type,
-    label: type
-  }));
+const TableColumnFilter = ({
+  options = [],
+  value = [],
+  onChange,
+  placeholder = "Filter...",
+  className = "text-sm",
+  wrapperClassName = ""
+}) => {
+
+  const allOptions = options;
 
   const handleChange = (selected, actionMeta) => {
+
     if (!selected || selected.length === 0) {
       onChange([]);
       return;
     }
 
     if (actionMeta.option?.value === "__ALL__") {
-      const currentlyAllSelected = value.length === ALL_TYPES.length;
+
+      const currentlyAllSelected =
+        value.length === options.length;
+
       if (currentlyAllSelected) {
         onChange([]);
       } else {
-        onChange(allOptions);
+        onChange(options);
       }
+
       return;
     }
 
-    const filtered = selected.filter((option) => option.value !== "__ALL__");
+    const filtered =
+      selected.filter(
+        option =>
+          option.value !== "__ALL__"
+      );
+
     onChange(filtered);
+
   };
 
   const selectedValue = (() => {
@@ -112,4 +128,4 @@ const NotificationTypeFilter = ({ value = [], onChange, placeholder = "Filter ty
   );
 };
 
-export default NotificationTypeFilter;
+export default TableColumnFilter;
