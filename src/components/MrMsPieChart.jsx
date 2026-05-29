@@ -21,7 +21,7 @@ const findKey = (row = {}, targets = [], exclude = []) => {
   });
 };
 
-const COLORS = ['#f59e0b', '#3b82f6']; // MR (Orange) and MS (Blue)
+const COLORS = ['#f59e0b', '#3b82f6'];
 
 const MrMsPieChart = ({ data = [] }) => {
   const chartData = useMemo(() => {
@@ -77,10 +77,10 @@ const MrMsPieChart = ({ data = [] }) => {
               paddingAngle={5}
               dataKey="value"
               stroke="none"
-              style={{ outline: 'none' }}
+              className="outline-none focus:outline-none"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} style={{ outline: 'none' }} />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="outline-none focus:outline-none" />
               ))}
               <Label
                 value={totalNotifs}

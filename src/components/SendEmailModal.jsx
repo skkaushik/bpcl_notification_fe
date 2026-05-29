@@ -23,7 +23,6 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     };
   }, [isOpen]);
 
-  // Filtered notifications strictly for the email modal
   const emailFilteredNotifications = useMemo(() => {
     let result = notifications.filter(n => {
       const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
@@ -153,8 +152,6 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
                 popperClassName="!z-[9999]"
               />
 
-              {/* Calendar Icon */}
-
               <button
                 type="button"
                 onClick={() => {
@@ -265,7 +262,6 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
 
               const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyStr)}`;
 
-              // Try to copy to clipboard as fallback
               try {
                 navigator.clipboard.writeText(`To: ${to}\nSubject: ${subject}\n\n${bodyStr}`);
                 alert("Email content copied to clipboard! Opening your mail client...");
@@ -273,7 +269,6 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
                 console.error("Failed to copy", err);
               }
 
-              // Attempt to open email client
               window.location.href = mailtoLink;
             }}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-bold text-white transition-all ${emailFilteredNotifications.length === 0 ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}

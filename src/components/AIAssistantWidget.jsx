@@ -24,12 +24,10 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
   const messagesEndRef = useRef(null);
   const layoutMenuRef = useRef(null);
 
-  // ─── Persistent chat session refs ─────────────────────
-  const geminiChatRef = useRef(null);       // Gemini chat session object
-  const openaiHistoryRef = useRef([]);      // OpenAI message history array
-  const sessionProviderRef = useRef(null);  // Track which provider the session was created for
-  const sessionKeyRef = useRef(null);       // Track which API key the session was created with
-
+  const geminiChatRef = useRef(null);      
+  const openaiHistoryRef = useRef([]);     
+  const sessionProviderRef = useRef(null); 
+  const sessionKeyRef = useRef(null);      
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,7 +37,6 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Close layout menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (layoutMenuRef.current && !layoutMenuRef.current.contains(event.target)) {
@@ -50,7 +47,6 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close on Escape key when in modal or floating mode
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen && (viewMode === 'modal' || viewMode === 'floating')) {
@@ -62,7 +58,6 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, viewMode, setIsOpen]);
 
-  // ─── Reset chat session when provider/key/data changes ─
   useEffect(() => {
     geminiChatRef.current = null;
     openaiHistoryRef.current = [];
@@ -70,12 +65,10 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
     sessionKeyRef.current = null;
   }, [provider, apiKey, contextData]);
 
-  // ─── Build system instruction ──────────────────────────
   const getSystemInstruction = (forProvider) => {
     if (contextData.length > 0) {
       let dataString = JSON.stringify(contextData);
 
-      // OpenAI has 128k token limit — truncate if needed
       if (forProvider === 'openai' && dataString.length > 400000) {
         let truncated = [];
         let len = 0;
@@ -89,7 +82,6 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
           `\n\n[Data truncated for OpenAI. Showing ${truncated.length} of ${contextData.length} rows. Use Google Gemini for full dataset analysis.]`;
       }
 
-      // Extract column names from data for schema awareness
       const sampleRow = contextData[0] || {};
       const columns = Object.keys(sampleRow).join(', ');
 
@@ -127,11 +119,9 @@ ${dataString}`;
     return "You are a helpful analytics assistant.";
   };
 
-  // ─── Core: Send message to AI ──────────────────────────
   const handleSend = async (promptText = input) => {
     if (!promptText.trim() || isLoading) return;
 
-    // Guard: no API key
     if (!apiKey) {
       setMessages(prev => [...prev, { 
         role: 'model', 
@@ -140,8 +130,7 @@ ${dataString}`;
       return;
     }
 
-    // Add user message to chat
-    setMessages(prev => [...prev, { role: 'user', text: promptText }]);
+    setMessages(prev => [...prev, { role: 'user', text: promptText }, { role: 'model', text: '' }]);
     setInput('');
     setIsLoading(true);
 
@@ -149,7 +138,7 @@ ${dataString}`;
       let responseText = '';
 
       if (provider === 'gemini') {
-        // ── Gemini: Use persistent chat session ──
+
         if (!geminiChatRef.current || sessionProviderRef.current !== 'gemini' || sessionKeyRef.current !== apiKey) {
           const ai = new GoogleGenAI({ apiKey });
           const sysInstruction = getSystemInstruction('gemini');
@@ -166,10 +155,14 @@ ${dataString}`;
 
         const response = await geminiChatRef.current.sendMessage({ message: promptText });
         responseText = response.text;
-        setMessages(prev => [...prev, { role: 'model', text: responseText }]);
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'model', text: responseText };
+          return updated;
+        });
 
       } else if (provider === 'openai') {
-        // ── OpenAI: Maintain history with streaming ──
+
         if (openaiHistoryRef.current.length === 0 || sessionProviderRef.current !== 'openai' || sessionKeyRef.current !== apiKey) {
           const sysInstruction = getSystemInstruction('openai');
           openaiHistoryRef.current = [{ role: 'system', content: sysInstruction }];
@@ -179,8 +172,7 @@ ${dataString}`;
 
         openaiHistoryRef.current.push({ role: 'user', content: promptText });
 
-        // Add placeholder for streaming
-        setMessages(prev => [...prev, { role: 'model', text: '' }]);
+
 
         const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
         const stream = await openai.chat.completions.create({
@@ -199,15 +191,16 @@ ${dataString}`;
             return updated;
           });
         }
-
         openaiHistoryRef.current.push({ role: 'assistant', content: responseText });
       }
 
-      // Add AI response to chat
-      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error) {
       console.error("AI Error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: `❌ Error: ${error.message}` }]);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'model', text: `❌ Error: ${error.message}` };
+        return updated;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -226,7 +219,6 @@ ${dataString}`;
     { text: "Summarize static equipment alerts", icon: <MdPeopleOutline className="text-emerald-500" size={18} /> }
   ];
 
-  // ─── Chart Renderer ────────────────────────────────────
   const renderChart = (chartConfig) => {
     const { title, type, data } = chartConfig;
     if (!data || data.length === 0) return null;
@@ -266,33 +258,30 @@ ${dataString}`;
     );
   };
 
-  // ─── Parse AI response for text + charts ───────────────
   const renderMessageContent = (text) => {
     if (!text) return null;
 
-    // Split on ```chart ... ``` blocks
     const parts = text.split(/```chart\s*\n?([\s\S]*?)```/g);
 
     return parts.map((part, idx) => {
-      // Even indices are text, odd indices are chart JSON
+
       if (idx % 2 === 0) {
-        // Regular text
+
         const trimmed = part.trim();
         return trimmed ? <div key={idx} className="whitespace-pre-wrap">{trimmed}</div> : null;
       } else {
-        // Chart JSON
+
         try {
           const chartConfig = JSON.parse(part.trim());
           return <div key={idx}>{renderChart(chartConfig)}</div>;
         } catch (e) {
-          // If JSON parse fails, render as code block
+
           return <pre key={idx} className="bg-slate-100 p-3 rounded-xl text-xs overflow-auto my-2">{part}</pre>;
         }
       }
     });
   };
 
-  // Layout styles based on viewMode
   const getContainerStyles = () => {
     switch(viewMode) {
       case 'floating':
@@ -310,21 +299,18 @@ ${dataString}`;
   return (
     <>
 
-
-      {/* Backdrop for modal */}
       {isOpen && viewMode === 'modal' && (
         <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)}></div>
       )}
 
-      {/* Main Container */}
       {isOpen && (
         <div className={`bg-white flex flex-col border border-slate-200 ${getContainerStyles()}`}>
           
-          {/* Header */}
-          <div className="relative z-20 bg-blue-100/90 backdrop-blur-md border-b border-slate-200 text-slate-800 px-4 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center shrink-0">
+
+          <div className="relative z-20 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-100 text-slate-800 px-4 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center shrink-0 shadow-sm">
             <div className="flex items-center space-x-3">
-              <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl">
-                <BsStars size={20} />
+              <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-[#4F46E5] rounded-md">
+                <BsStars size={18} className="text-white" />
               </div>
               <div>
                 <h3 className="font-black text-base sm:text-lg leading-none tracking-tight text-slate-900">Notifications AI</h3>
@@ -333,7 +319,7 @@ ${dataString}`;
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Layout Switcher Dropdown */}
+
               <div className="relative" ref={layoutMenuRef}>
                 <button 
                   onClick={() => setShowLayoutMenu(!showLayoutMenu)}
@@ -378,10 +364,9 @@ ${dataString}`;
             </div>
           </div>
 
-          {/* Body Area */}
           <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative">
             
-            {/* Welcome Screen (Show only if no messages) */}
+
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
                 <div className="bg-indigo-100 text-indigo-600 p-4 rounded-3xl mb-6 shadow-sm border border-indigo-200">
@@ -422,25 +407,23 @@ ${dataString}`;
                           <span className="font-bold text-xs uppercase tracking-wider">Copilot</span>
                         </div>
                       )}
-                      <div className="leading-relaxed font-medium">{renderMessageContent(msg.text)}</div>
+                      <div className="leading-relaxed font-medium">
+                        {msg.text ? renderMessageContent(msg.text) : (
+                          <div className="flex items-center space-x-2 py-2">
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-0"></div>
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-150"></div>
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-300"></div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white border border-slate-200 shadow-sm p-4 rounded-3xl rounded-bl-sm flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
-                )}
                 <div ref={messagesEndRef} />
               </div>
             )}
           </div>
 
-          {/* Input Area */}
           <div className="p-4 bg-white border-t border-slate-200 shrink-0">
             <div className="relative flex items-center border border-slate-300 rounded-3xl bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all px-4 py-2 mx-auto max-w-3xl">
               <input

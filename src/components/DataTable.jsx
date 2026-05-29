@@ -4,15 +4,12 @@ const DataTable = ({
   columns = [],
   data = [],
   emptyMessage = "No data available",
-  tableHeight = "500px",
+  maxHeightClass = "max-h-[500px]",
 }) => {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
 
-      <div
-        className="overflow-auto"
-        style={{ maxHeight: tableHeight }}
-      >
+      <div className={`overflow-auto ${maxHeightClass}`}>
         <table className="w-full">
 
           <thead className="sticky top-0 z-10 bg-slate-50">

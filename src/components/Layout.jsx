@@ -1,11 +1,13 @@
 import Header from './Header';
 
-const Layout = ({ children, hasData }) => {
+const Layout = ({ children, hasData, activeView, setActiveView }) => {
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
-      <div className="flex flex-1 flex-col overflow-x-hidden min-w-0">
-        <Header hasData={hasData} />
-        <main className="p-4 sm:px-8 sm:py-6 w-full">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#FFFFFF] font-sans text-slate-900">
+      <div className="flex-shrink-0 z-30">
+        <Header hasData={hasData} activeView={activeView} setActiveView={setActiveView} />
+      </div>
+      <div className="flex flex-1 min-w-0 min-h-0 relative">
+        <main className="flex-1 h-full w-full overflow-y-auto">
           <div className="w-full">{children}</div>
         </main>
       </div>

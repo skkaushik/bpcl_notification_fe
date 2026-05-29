@@ -32,15 +32,14 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
 
     if (!typeKey || !unitKey || !notifKey) return [];
 
-    // Grouping structure: { "CDU": { "M2": Set(), "M4": Set() } }
     const grouped = {};
 
     data.forEach((row) => {
       const rawUnitStr = String(row[unitKey] ?? '').trim().toUpperCase();
       
-      // Check if it matches our desired prefix (MS or MR)
+
       if (rawUnitStr.startsWith(prefix)) {
-        const unitName = rawUnitStr.substring(2); // Extract unit without prefix
+        const unitName = rawUnitStr.substring(2);
         const rawType = String(row[typeKey] ?? '').trim().toUpperCase();
         const typeName = rawType.replace(/\s+/g, '');
         const notifId = String(row[notifKey] ?? '').trim();
@@ -54,12 +53,11 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
       }
     });
 
-    // Flatten it into an array
     const result = [];
     Object.keys(grouped).sort().forEach((unit) => {
       Object.keys(grouped[unit]).sort().forEach((type) => {
         result.push({
-          label: `${unit}-${type}`, // unique key
+          label: `${unit}-${type}`,
           unit: unit,
           type: type,
           count: grouped[unit][type].size
@@ -70,7 +68,6 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
     return result;
   }, [data, prefix]);
 
-  // Custom XAxis tick to show Type on top and Unit below
   const CustomTick = (props) => {
     const { x, y, payload } = props;
     const [unit, type] = payload.value.split('-');
@@ -104,7 +101,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
                 data={chartData}
                 margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
               >
-                {/* Gradient */}
+
               <defs>
                 <linearGradient
                   id="notificationBarGradient"
@@ -123,7 +120,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={<CustomTick />} 
-                  interval={0} // Show all ticks
+                  interval={0}
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} width={40} />
                 <Tooltip 

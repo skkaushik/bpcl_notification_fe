@@ -19,25 +19,15 @@ const InputOption = ({
   const onMouseUp = () => setIsActive(false);
   const onMouseLeave = () => setIsActive(false);
 
-  let bg = "transparent";
-  if (isFocused) bg = "#f8fafc";
-  if (isActive) bg = "#f1f5f9";
-
-  const style = {
-    alignItems: "center",
-    backgroundColor: bg,
-    color: "inherit",
-    display: "flex",
-    padding: "8px 12px",
-    cursor: "pointer",
-  };
+  let bgClass = "bg-transparent text-slate-700";
+  if (isFocused) bgClass = "bg-[#f8fafc] text-slate-900";
+  if (isActive) bgClass = "bg-[#f1f5f9] text-slate-900";
 
   const props = {
     ...innerProps,
     onMouseDown,
     onMouseUp,
     onMouseLeave,
-    style,
   };
 
   return (
@@ -49,13 +39,15 @@ const InputOption = ({
       getStyles={getStyles}
       innerProps={props}
     >
-      <input 
-        type="checkbox" 
-        checked={isSelected} 
-        readOnly 
-        className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-      />
-      <span className="text-sm font-medium text-slate-700">{children}</span>
+      <div className={`flex items-center w-full px-3 py-2 cursor-pointer transition-colors ${bgClass}`}>
+        <input 
+          type="checkbox" 
+          checked={isSelected} 
+          readOnly 
+          className="mr-3 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <span className="text-sm font-medium">{children}</span>
+      </div>
     </components.Option>
   );
 };
@@ -129,68 +121,8 @@ const TableColumnFilter = ({
         onChange={handleChange}
         placeholder={placeholder}
         className={className}
+        classNamePrefix="react-select"
         menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-        styles={{
-          menuPortal: base => ({ ...base, zIndex: 9999 }),
-          control: (base) => ({
-            ...base,
-            minHeight: "42px",
-            maxHeight: "60px",
-            overflowY: "auto",
-            borderRadius: "12px",
-            borderColor: "#e2e8f0",
-            boxShadow: "none",
-            alignItems: "flex-start",
-            paddingTop: "4px",
-            paddingBottom: "4px",
-            "&:hover": { borderColor: "#cbd5e1" },
-            "::-webkit-scrollbar": { width: "6px" },
-            "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" }
-          }),
-          multiValue: (base) => ({
-            ...base,
-            borderRadius: "8px",
-            backgroundColor: "#eef2ff",
-            padding: "2px 4px",
-          }),
-          multiValueLabel: (base) => ({
-            ...base,
-            color: "#4f46e5",
-            fontWeight: 700,
-          }),
-          multiValueRemove: (base) => ({
-            ...base,
-            color: "#4f46e5",
-            ":hover": {
-              backgroundColor: "#e0e7ff",
-              color: "#4338ca",
-              borderRadius: "6px",
-            },
-          }),
-          menu: (base) => ({
-            ...base,
-            borderRadius: "12px",
-            overflow: "hidden",
-            boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-            border: "1px solid #e2e8f0",
-          }),
-          menuList: (base) => ({
-            ...base,
-            padding: "4px",
-            "::-webkit-scrollbar": { width: "8px" },
-            "::-webkit-scrollbar-track": { background: "transparent" },
-            "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" },
-            "::-webkit-scrollbar-thumb:hover": { background: "#94a3b8" },
-          }),
-          valueContainer: (base) => ({
-            ...base,
-            maxHeight: "80px",
-            overflowY: "auto",
-            flexWrap: "wrap",
-            "::-webkit-scrollbar": { width: "6px" },
-            "::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "10px" }
-          }),
-        }}
       />
     </div>
   );
