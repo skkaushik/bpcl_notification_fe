@@ -635,6 +635,19 @@ const Dashboard = () => {
     window.dispatchEvent(new CustomEvent('data-loaded', { detail: rawData }));
   }, [rawData]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedEquipment(null);
+        setShowUploadDialog(false);
+        setShowGlobalEmailModal(false);
+        setSelectedNotification(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
 
 
   const colorStyles = {
@@ -870,11 +883,7 @@ const Dashboard = () => {
                 <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Notification Type:</span>
                 <button
                   onClick={() => {
-                    if (activeTypeFilter.length === ALL_TYPES.length) {
-                      setActiveTypeFilter([]);
-                    } else {
-                      setActiveTypeFilter(ALL_TYPES.map(t => ({ value: t, label: t })));
-                    }
+                    setActiveTypeFilter([]);
                   }}
                   className={`cursor-pointer
                     px-3
@@ -888,9 +897,9 @@ const Dashboard = () => {
                     shadow-sm
                     hover:-translate-y-0.5
                     hover:shadow-md
-                    ${activeTypeFilter.length === ALL_TYPES.length
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-indigo-200"
-                      : "bg-white text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                    ${(activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length)
+                      ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
                     }`}
                 >
                   All
@@ -901,7 +910,9 @@ const Dashboard = () => {
                     <button
                       key={type}
                       onClick={() => {
-                        if (isSelected) {
+                        if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
+                          setActiveTypeFilter([{ value: type, label: type }]);
+                        } else if (activeTypeFilter.some((item) => item.value === type)) {
                           setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
                         } else {
                           setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
@@ -920,8 +931,8 @@ const Dashboard = () => {
                         hover:-translate-y-0.5
                         hover:shadow-md
                         ${isSelected
-                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-indigo-200"
-                          : "bg-white text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                          ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                          : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
                         }`}
                     >
                       {type}
@@ -1082,7 +1093,7 @@ const Dashboard = () => {
                     <h3 className="text-xl font-bold text-slate-900">
                       Critical Equipment Details
                     </h3>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 mt-1">
                       Overview of critical equipment notifications
                     </p>
                   </div>
@@ -1110,7 +1121,7 @@ const Dashboard = () => {
                         },
                       },
                     }}
-                    onRowClicked={(row) => setSelectedEquipment(row)}
+                    onRowClicked={(row) => setSelectedEquipment(prev => prev && prev.displayEquipId === row.displayEquipId ? null : row)}
                     pagination
                     paginationPerPage={10}
                     paginationRowsPerPageOptions={[10, 20, 30, 50]}
@@ -1125,7 +1136,7 @@ const Dashboard = () => {
                   />
                 </div>
               </div>
-              
+
               {selectedEquipment && (
                 <div className="animate-drawer-from-right w-full bg-white border border-[#E5E7EB] rounded-[24px] shadow-lg overflow-hidden flex flex-col transition-all duration-300 xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:w-[520px] 2xl:w-[600px] xl:shrink-0">
                   <div className="flex-shrink-0 p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
@@ -1146,52 +1157,52 @@ const Dashboard = () => {
                           <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
                           <div className="flex justify-between items-start mb-4">
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 mb-0.5">Notification ID</p>
+                              <p className="text-xs font-bold text-slate-400 mb-0.5">Notification ID</p>
                               <p className="text-sm font-bold text-slate-900">{notif.displayId}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-[10px] font-bold text-slate-400 mb-0.5">Date</p>
+                              <p className="text-xs font-bold text-slate-400 mb-0.5">Date</p>
                               <p className="text-sm font-bold text-slate-900">{notif.displayDate}</p>
                             </div>
                           </div>
 
                           <div className="flex flex-wrap gap-4 mb-4">
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 mb-1">Notification Type</p>
-                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                              <p className="text-xs font-bold text-slate-400 mb-1">Notification Type</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600">
                                 {camelToTitleCase(notif.displayType)}
                               </span>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 mb-1">System Status</p>
-                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-600">
+                              <p className="text-xs font-bold text-slate-400 mb-1">System Status</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-600">
                                 {camelToTitleCase(notif.displayStatus)}
                               </span>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 mb-1">Unit</p>
-                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600">
+                              <p className="text-xs font-bold text-slate-400 mb-1">Unit</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-600">
                                 {camelToTitleCase(notif.displayUnitType)}
                               </span>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 mb-1">Priority</p>
-                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700">
+                              <p className="text-xs font-bold text-slate-400 mb-1">Priority</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-bold bg-violet-50 text-violet-700">
                                 {camelToTitleCase(notif.displayPriority)}
                               </span>
                             </div>
                           </div>
 
                           <div className="mb-3">
-                            <p className="text-[10px] font-bold text-slate-400 mb-1">Reported By</p>
-                            <p className="text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                            <p className="text-xs font-bold text-slate-400 mb-1">Reported By</p>
+                            <p className="text-sm font-semibold text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
                               {camelToTitleCase(notif.displayReportedBy)}
                             </p>
                           </div>
 
                           <div className="mt-4">
-                            <p className="text-[10px] font-bold text-slate-400 mb-2">Description</p>
-                            <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
+                            <p className="text-xs font-bold text-slate-400 mb-2">Description</p>
+                            <div className="text-sm text-black leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
                               {notif.displayDesc1 && notif.displayDesc2 ? (
                                 <>
                                   <div className="flex items-start">
@@ -1331,17 +1342,17 @@ const Dashboard = () => {
                   <p className="mt-2 text-lg font-bold text-slate-900">
                     {selectedNotification.status}
                   </p>
-                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                  <p className="text-xs font-bold tracking-widest text-slate-400">
-                    Priority
-                  </p>
+                    <p className="text-xs font-bold tracking-widest text-slate-400">
+                      Priority
+                    </p>
 
-                  <p className="mt-2 text-lg font-bold text-slate-900">
-                    {selectedNotification.priority}
-                  </p>
+                    <p className="mt-2 text-lg font-bold text-slate-900">
+                      {selectedNotification.priority}
+                    </p>
 
-                </div>
+                  </div>
                 </div>
 
 
