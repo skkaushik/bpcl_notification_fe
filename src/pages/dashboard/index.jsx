@@ -6,11 +6,9 @@ import MrMsPieChart from "../../components/MrMsPieChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { BsUpload, BsEnvelope } from "react-icons/bs";
 import * as XLSX from "xlsx";
-import NotificationTypeFilter, { ALL_TYPES } from "../../components/NotificationTypeFilter";
+import { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
-import DataTable from "../../components/DataTable";
-
-import HeaderFilter from "../../components/HeaderFilter";
+import DataTable from "react-data-table-component";
 import {
   ResponsiveContainer,
   BarChart,
@@ -37,6 +35,16 @@ const findKey = (row = {}, targets = []) => {
     if (found) return found;
   }
   return undefined;
+};
+
+// Helper function to convert camelCase to Title Case
+const camelToTitleCase = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  // Add space before capital letters, then capitalize first letter of each word
+  return text
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
 };
 const formatExcelDate = (val) => {
   if (!val) return 'N/A';
@@ -371,9 +379,7 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
 
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
-  const [equipmentFilter, setEquipmentFilter] = useState([]);
-  const [notificationTypeFilter, setNotificationTypeFilter] = useState([]);
-  const [unitTypeFilter, setUnitTypeFilter] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -438,169 +444,150 @@ const Dashboard = () => {
     const dateKey = findKey(sample, ["Notif.date", "Notification Date", "Date"]);
     const notificationIdKey = findKey(sample, ["Notification", "Notification No"]);
     const statusKey = findKey(sample, ["Status", "User status"]);
-    const descriptionKey = findKey(sample, ["Description"]);
+    const priorityKey = findKey(sample, ["Priority", "priority"]);
+    const reportedByKey = findKey(sample, ["Reported By", "ReportedBy", "Reported by", "reportedby"]);
+    const desc1Key = Object.keys(sample).find((k) => k.toLowerCase() === "description");
+    const desc2Key = Object.keys(sample).find((k) => k.toLowerCase() === "description2" || k.toLowerCase() === "description 2");
 
     if (!equipmentKey || !workCtrKey) return [];
 
     const equipmentCounts = {};
+    const equipmentMap = {};
     rawData.forEach((row) => {
       const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
       if (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) {
         const id = String(row[equipmentKey] || "").trim();
-        if (id) equipmentCounts[id] = (equipmentCounts[id] || 0) + 1;
+        if (id) {
+          equipmentCounts[id] = (equipmentCounts[id] || 0) + 1;
+          if (!equipmentMap[id]) equipmentMap[id] = [];
+
+          equipmentMap[id].push({
+            ...row,
+            displayId: row[notificationIdKey] || "N/A",
+            displayEquipId: id,
+            displayType: row[typeKey],
+            displayUnitType: rawWorkCtr.startsWith("MR") ? "MR" : "MS",
+            displayDate: formatExcelDate(row[dateKey]),
+            displayStatus: row[statusKey] || "N/A",
+            displayPriority: priorityKey ? (String(row[priorityKey] || "").trim() || "N/A") : "N/A",
+            displayReportedBy: reportedByKey ? (String(row[reportedByKey] || "").trim() || "N/A") : "N/A",
+            displayDesc1: desc1Key ? (String(row[desc1Key] || "").trim() || "") : "",
+            displayDesc2: desc2Key ? (String(row[desc2Key] || "").trim() || "") : "",
+          });
+        }
       }
     });
 
-    return rawData
-      .filter((row) => {
-        const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
-        const equipmentId = String(row[equipmentKey] || "").trim();
-        return (
-          (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) &&
-          equipmentCounts[equipmentId] > 1
-        );
-      })
-      .map((row) => ({
-        ...row,
+    const groupedData = [];
+    Object.entries(equipmentMap).forEach(([id, notifications]) => {
+      if (notifications.length > 1) {
+        const uniqueTypes = [...new Set(notifications.map(n => String(n.displayType)))].join(', ');
+        const uniquePriorities = [...new Set(notifications.map(n => String(n.displayPriority)).filter(p => p && p !== 'N/A'))].join(', ') || 'N/A';
+        groupedData.push({
+          displayEquipId: id,
+          displayType: uniqueTypes,
+          displayUnitType: notifications[0].displayUnitType,
+          displayPriority: uniquePriorities,
+          notificationCount: notifications.length,
+          notifications: notifications,
+        });
+      }
+    });
 
-        displayId: row[notificationIdKey] || "N/A",
-        displayEquipId: row[equipmentKey],
-        displayType: row[typeKey],
-        displayUnitType: String(row[workCtrKey]).toUpperCase().startsWith("MR") ? "MR" : "MS",
-        displayDate: formatExcelDate(row[dateKey]),
-        displayStatus: row[statusKey] || "N/A",
-        displayDesc: row[descriptionKey] || "No description provided",
-      }));
+    return groupedData;
   }, [rawData]);
-  const equipmentOptions = useMemo(() => {
-
-    const unique = [
-      ...new Set(
-        criticalEquipmentData.map(
-          item => String(item.displayEquipId)
-        )
-      )
-    ];
-
-    return unique.map(item => ({
-      value: item,
-      label: item
-    }));
-
-  }, [criticalEquipmentData]);
-
-  const notificationOptions = useMemo(() => {
-
-    const unique = [
-      ...new Set(
-        criticalEquipmentData.map(
-          item => String(item.displayType)
-        )
-      )
-    ];
-
-    return unique.map(item => ({
-      value: item,
-      label: item
-    }));
-
-  }, [criticalEquipmentData]);
-
-  const unitOptions = useMemo(() => {
-
-    const unique = [
-      ...new Set(
-        criticalEquipmentData.map(
-          item => String(item.displayUnitType)
-        )
-      )
-    ];
-
-    return unique.map(item => ({
-      value: item,
-      label: item
-    }));
-
-  }, [criticalEquipmentData]);
   const filteredCriticalEquipmentData = useMemo(() => {
+    if (!searchQuery) return criticalEquipmentData;
+    const lowerQuery = searchQuery.toLowerCase();
     return criticalEquipmentData.filter(row => {
-      const equipmentMatch =
-        equipmentFilter.length === 0 ||
-        equipmentFilter.some(
-          item =>
-            item.value ===
-            String(row.displayEquipId)
-        );
-      const typeMatch =
-        notificationTypeFilter.length === 0 ||
-        notificationTypeFilter.some(
-          item =>
-            item.value ===
-            String(row.displayType)
-        );
-      const unitMatch =
-        unitTypeFilter.length === 0 ||
-        unitTypeFilter.some(
-          item =>
-            item.value ===
-            String(row.displayUnitType)
-        );
       return (
-        equipmentMatch &&
-        typeMatch &&
-        unitMatch
+        String(row.displayEquipId).toLowerCase().includes(lowerQuery) ||
+        String(row.displayType).toLowerCase().includes(lowerQuery) ||
+        String(row.displayUnitType).toLowerCase().includes(lowerQuery)
       );
     });
-  }, [
-    criticalEquipmentData,
-    equipmentFilter,
-    notificationTypeFilter,
-    unitTypeFilter
-  ]);
+  }, [criticalEquipmentData, searchQuery]);
+
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#EEF2FF',
+        borderTopLeftRadius: '16px',
+        borderTopRightRadius: '16px',
+        borderBottomWidth: '1px',
+        borderBottomColor: '#E0E7FF',
+        minHeight: '56px',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '13px',
+        fontWeight: 'bold',
+        color: '#3730A3',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+      },
+    },
+    rows: {
+      style: {
+        minHeight: '64px',
+        fontSize: '14px',
+        color: '#334155',
+        backgroundColor: '#FFFFFF',
+        '&:hover': {
+          backgroundColor: '#F8FAFC',
+          cursor: 'pointer',
+        },
+      },
+      stripedStyle: {
+        color: '#334155',
+        backgroundColor: '#F8FAFC',
+      },
+    },
+    pagination: {
+      style: {
+        borderTopWidth: '1px',
+        borderTopColor: '#E2E8F0',
+        borderBottomLeftRadius: '16px',
+        borderBottomRightRadius: '16px',
+      },
+    },
+  };
+
   const criticalEquipmentColumns = [
     {
-      header: (
-        <HeaderFilter
-          title="Equipment ID"
-          options={equipmentOptions}
-          value={equipmentFilter}
-          onChange={setEquipmentFilter}
-        />
-      ),
-      key: "displayEquipId"
+      name: "Equipment ID",
+      selector: row => row.displayEquipId,
+      sortable: true,
     },
     {
-      header: (
-        <HeaderFilter
-          title="Notification Type"
-          options={notificationOptions}
-          value={notificationTypeFilter}
-          onChange={setNotificationTypeFilter}
-        />
-      ),
-      key: "displayType"
+      name: "Notification Type",
+      selector: row => row.displayType,
+      sortable: true,
     },
     {
-      header: (
-        <HeaderFilter
-          title="Unit Type"
-          options={unitOptions}
-          value={unitTypeFilter}
-          onChange={setUnitTypeFilter}
-        />
-      ),
-      key: "displayUnitType"
+      name: "Unit Type",
+      selector: row => row.displayUnitType,
+      sortable: true,
     },
     {
-      header: "Details",
-      key: "history_action",
-      render: (row) => (
-        <button
-          onClick={() => setSelectedEquipment(row)}
-          className="rounded-lg bg-indigo-100 px-4 py-1 text-sm font-bold text-indigo-700 hover:bg-indigo-200"
-        >
-          View Details
-        </button>
+      name: "Total Count",
+      selector: row => row.notificationCount,
+      sortable: true,
+      cell: row => (
+        <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700">
+          {row.notificationCount}
+        </span>
+      ),
+    },
+    {
+      name: "Priority",
+      selector: row => row.displayPriority,
+      sortable: true,
+      cell: row => (
+        <span className="inline-flex items-center justify-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700">
+          {row.displayPriority || 'N/A'}
+        </span>
       ),
     },
   ];
@@ -613,7 +600,6 @@ const Dashboard = () => {
     impactedUnits: '0',
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeView, setActiveView] = useState("dashboard");
   const [selectedEquipment, setSelectedEquipment] = useState(null);
   const rowsPerPage = 10;
   const [unitPerformance, setUnitPerformance] = useState([
@@ -649,16 +635,7 @@ const Dashboard = () => {
     window.dispatchEvent(new CustomEvent('data-loaded', { detail: rawData }));
   }, [rawData]);
 
-  useEffect(() => {
-    if (selectedNotification) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [selectedNotification]);
+
 
   const colorStyles = {
     indigo: { badgeBg: 'bg-indigo-50', badgeText: 'text-indigo-600', badgeRing: 'ring-indigo-600/10', dot: 'bg-indigo-600' },
@@ -846,7 +823,7 @@ const Dashboard = () => {
     }
   };
   return (
-    <Layout hasData={rawData.length > 0} activeView={activeView} setActiveView={setActiveView}>
+    <Layout hasData={rawData.length > 0}>
 
       <div className="px-8 py-6">
         {uploadLoading && (
@@ -885,172 +862,370 @@ const Dashboard = () => {
           </div>
         )}
         {rawData.length > 0 ? (
-          activeView === "dashboard" ? (
-            <>
+          <>
 
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-8">
 
-                <div className="w-full sm:w-80 lg:w-[400px]">
-                  <NotificationTypeFilter
-                    value={activeTypeFilter}
-                    onChange={setActiveTypeFilter}
-                    placeholder="Notification Type"
-                  />
-                </div>
-                
-
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap gap-3 items-center">
+                <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Notification Type:</span>
+                <button
+                  onClick={() => {
+                    if (activeTypeFilter.length === ALL_TYPES.length) {
+                      setActiveTypeFilter([]);
+                    } else {
+                      setActiveTypeFilter(ALL_TYPES.map(t => ({ value: t, label: t })));
+                    }
+                  }}
+                  className={`cursor-pointer
+                    px-3
+                    py-2
+                    rounded-xl
+                    text-sm
+                    font-semibold
+                    transition-all
+                    duration-300
+                    border-2
+                    shadow-sm
+                    hover:-translate-y-0.5
+                    hover:shadow-md
+                    ${activeTypeFilter.length === ALL_TYPES.length
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-indigo-200"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                    }`}
+                >
+                  All
+                </button>
+                {ALL_TYPES.map((type) => {
+                  const isSelected = activeTypeFilter.some((item) => item.value === type);
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        if (isSelected) {
+                          setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
+                        } else {
+                          setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
+                        }
+                      }}
+                      className={`cursor-pointer
+                        px-3
+                        py-2
+                        rounded-xl
+                        text-sm
+                        font-semibold
+                        transition-all
+                        duration-300
+                        border-2
+                        shadow-sm
+                        hover:-translate-y-0.5
+                        hover:shadow-md
+                        ${isSelected
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-indigo-200"
+                          : "bg-white text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                        }`}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
+                {activeTypeFilter.length > 0 && activeTypeFilter.length !== ALL_TYPES.length && (
                   <button
-                    onClick={() => setShowUploadDialog(true)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
+                    onClick={() => setActiveTypeFilter([])}
+                    className="cursor-pointer px-2 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 ml-1"
                   >
-                    <BsUpload className="text-purple-600 text-base" />
-                    Upload New File
+                    Clear
                   </button>
-                  <button
-                    onClick={() => setShowGlobalEmailModal(true)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
-                  >
-                    <BsEnvelope className="text-white text-base" />
-                    Send Emails
-                  </button>
-                </div>
+                )}
               </div>
 
-              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
-                {[
-                  {
-                    label: 'Total Notifications',
-                    value: stats.totalNotifications,
-                    textColor: 'text-[#2563EB]',
-                    iconBg: 'bg-[#DBEAFE]',
-                    bgColor: 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE]/40',
-                    borderColor: 'border-[#BFDBFE]',
-                    icon: '📊',
-                  },
-                  {
-                    label: 'Notif > 15 days',
-                    value: stats.notif15Days,
-                    textColor: 'text-[#7C3AED]',
-                    iconBg: 'bg-[#EDE9FE]',
-                    bgColor: 'bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE]/40',
-                    borderColor: 'border-[#DDD6FE]',
-                    icon: '⏱️',
-                  },
-                  {
-                    label: 'Units impacted',
-                    value: stats.impactedUnits,
-                    textColor: 'text-[#DC2626]',
-                    iconBg: 'bg-[#FEE2E2]',
-                    bgColor: 'bg-gradient-to-br from-[#FEF2F2] to-[#FEE2E2]/40',
-                    borderColor: 'border-[#FECACA]',
-                    icon: '🏭',
-                  },
-                  {
-                    label: 'M2 Pending > 7 days',
-                    value: stats.m2Pending,
-                    textColor: 'text-[#EA580C]',
-                    iconBg: 'bg-[#FFEDD5]',
-                    bgColor: 'bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5]/40',
-                    borderColor: 'border-[#FED7AA]',
-                    icon: '⏳',
-                  },
-                  {
-                    label: 'M1 Pending > 25 days',
-                    value: stats.m1Pending,
-                    textColor: 'text-[#D97706]',
-                    iconBg: 'bg-[#FEF3C7]',
-                    bgColor: 'bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7]/40',
-                    borderColor: 'border-[#FDE68A]',
-                    icon: '⚠️',
-                  },
-                ].map((stat) => (
-                  <div key={stat.label} className={`group flex flex-col justify-between ${stat.bgColor} rounded-[20px] p-[20px] shadow-md border border-slate-100/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl relative overflow-hidden`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{stat.label}</p>
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.iconBg} ${stat.textColor} text-base`}>
-                        {stat.icon}
-                      </div>
-                    </div>
-                    <div className="flex items-baseline mt-2">
-                      <h3 className={`text-4xl font-black tracking-tight ${stat.textColor}`}>{stat.value}</h3>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowUploadDialog(true)}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
+                >
+                  <BsUpload className="text-purple-600 text-base" />
+                  Upload New File
+                </button>
+                <button
+                  onClick={() => setShowGlobalEmailModal(true)}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
+                >
+                  <BsEnvelope className="text-white text-base" />
+                  Send Emails
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
+              {[
+                {
+                  label: 'Total Notifications',
+                  value: stats.totalNotifications,
+                  textColor: 'text-[#2563EB]',
+                  iconBg: 'bg-[#DBEAFE]',
+                  bgColor: 'bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE]/40',
+                  borderColor: 'border-[#BFDBFE]',
+                  icon: '📊',
+                },
+                {
+                  label: 'Notif > 15 days',
+                  value: stats.notif15Days,
+                  textColor: 'text-[#7C3AED]',
+                  iconBg: 'bg-[#EDE9FE]',
+                  bgColor: 'bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE]/40',
+                  borderColor: 'border-[#DDD6FE]',
+                  icon: '⏱️',
+                },
+                {
+                  label: 'Units impacted',
+                  value: stats.impactedUnits,
+                  textColor: 'text-[#DC2626]',
+                  iconBg: 'bg-[#FEE2E2]',
+                  bgColor: 'bg-gradient-to-br from-[#FEF2F2] to-[#FEE2E2]/40',
+                  borderColor: 'border-[#FECACA]',
+                  icon: '🏭',
+                },
+                {
+                  label: 'M2 Pending > 7 days',
+                  value: stats.m2Pending,
+                  textColor: 'text-[#EA580C]',
+                  iconBg: 'bg-[#FFEDD5]',
+                  bgColor: 'bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5]/40',
+                  borderColor: 'border-[#FED7AA]',
+                  icon: '⏳',
+                },
+                {
+                  label: 'M1 Pending > 25 days',
+                  value: stats.m1Pending,
+                  textColor: 'text-[#D97706]',
+                  iconBg: 'bg-[#FEF3C7]',
+                  bgColor: 'bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7]/40',
+                  borderColor: 'border-[#FDE68A]',
+                  icon: '⚠️',
+                },
+              ].map((stat) => (
+                <div key={stat.label} className={`group flex flex-col justify-between ${stat.bgColor} rounded-[20px] p-[20px] shadow-md border border-slate-100/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl relative overflow-hidden`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{stat.label}</p>
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.iconBg} ${stat.textColor} text-base`}>
+                      {stat.icon}
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-baseline mt-2">
+                    <h3 className={`text-4xl font-black tracking-tight ${stat.textColor}`}>{stat.value}</h3>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-              <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
-                <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
-                  <NotificationTypeBarChart data={filteredRawData} />
-                </div>
-                <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden flex flex-col items-center justify-center">
-                  <MrMsPieChart data={filteredRawData} />
+            <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+              <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+                <NotificationTypeBarChart data={filteredRawData} />
+              </div>
+              <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden flex flex-col items-center justify-center">
+                <MrMsPieChart data={filteredRawData} />
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-2">
+              <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+                <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
+              </div>
+              <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+                <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
+              </div>
+            </div>
+
+            <div className="mt-8 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">
+                    Total Due Notifications
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    MR vs MS notification comparison by unit (Area Chart)
+                  </p>
                 </div>
               </div>
-
-              <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-2">
-                <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
-                  <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
-                </div>
-                <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
-                  <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
+              <div className="w-full">
+                <div className="w-full h-[320px] sm:h-[470px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dueChartData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="msAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="mrAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="unit" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
+                      <YAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ borderRadius: '14px', border: '1px solid #e2e8f0' }} />
+                      <Legend verticalAlign="top" align="right" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                      <Area type="monotone" dataKey="MS" name="MS (Static)" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#msAreaGrad)" />
+                      <Area type="monotone" dataKey="MR" name="MR (Rotary)" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#mrAreaGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-8 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+            <div className={`mt-8 transition-all duration-300 ${selectedEquipment ? 'flex flex-col gap-6 xl:flex-row xl:items-start' : ''}`}>
+              <div className={`${selectedEquipment ? 'w-full xl:flex-1 xl:min-w-0' : 'w-full'} bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden transition-all duration-300`}>
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">
-                      Total Due Notifications
+                      Critical Equipment Details
                     </h3>
                     <p className="text-sm text-slate-500">
-                      MR vs MS notification comparison by unit (Area Chart)
+                      Overview of critical equipment notifications
                     </p>
                   </div>
-                </div>
-                <div className="w-full">
-                  <div className="w-full h-[320px] sm:h-[470px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dueChartData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
-                        <defs>
-                          <linearGradient id="msAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="mrAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="unit" axisLine={false} tickLine={false} tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }} />
-                        <YAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
-                        <Tooltip contentStyle={{ borderRadius: '14px', border: '1px solid #e2e8f0' }} />
-                        <Legend verticalAlign="top" align="right" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
-                        <Area type="monotone" dataKey="MS" name="MS (Static)" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#msAreaGrad)" />
-                        <Area type="monotone" dataKey="MR" name="MR (Rotary)" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#mrAreaGrad)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  <div className="w-full sm:w-72">
+                    <input
+                      type="text"
+                      placeholder="Search equipment, type, unit..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+                    />
                   </div>
                 </div>
+                <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <DataTable
+                    columns={criticalEquipmentColumns}
+                    data={filteredCriticalEquipmentData}
+                    customStyles={{
+                      ...customStyles,
+                      rows: {
+                        ...customStyles.rows,
+                        style: {
+                          ...customStyles.rows.style,
+                          cursor: 'pointer',
+                        },
+                      },
+                    }}
+                    onRowClicked={(row) => setSelectedEquipment(row)}
+                    pagination
+                    paginationPerPage={10}
+                    paginationRowsPerPageOptions={[10, 20, 30, 50]}
+                    striped
+                    highlightOnHover
+                    responsive
+                    fixedHeader
+                    fixedHeaderScrollHeight="650px"
+                    noDataComponent={
+                      <div className="p-8 text-center text-slate-500">No critical equipment found</div>
+                    }
+                  />
+                </div>
               </div>
+              
+              {selectedEquipment && (
+                <div className="animate-drawer-from-right w-full bg-white border border-[#E5E7EB] rounded-[24px] shadow-lg overflow-hidden flex flex-col transition-all duration-300 xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:w-[520px] 2xl:w-[600px] xl:shrink-0">
+                  <div className="flex-shrink-0 p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Equipment Details</h2>
+                      <p className="text-indigo-600 font-semibold text-sm mt-1">ID: {selectedEquipment.displayEquipId}</p>
+                    </div>
+                    <button onClick={() => setSelectedEquipment(null)} className="rounded-full bg-slate-100 p-2 hover:bg-slate-200 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
 
-              <div className="mt-8 grid gap-8 lg:grid-cols-3">
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-                <DataTable
-                  columns={criticalEquipmentColumns}
-                  data={filteredCriticalEquipmentData}
-                  tableHeight="650px"
-                  emptyMessage="No critical equipment found"
-                />
-              </div>
-            </>
-          )
+                  <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 tracking-wider">Notification History</h3>
+                      {selectedEquipment.notifications.map((notif, idx) => (
+                        <div key={idx} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm relative overflow-hidden">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 mb-0.5">Notification ID</p>
+                              <p className="text-sm font-bold text-slate-900">{notif.displayId}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] font-bold text-slate-400 mb-0.5">Date</p>
+                              <p className="text-sm font-bold text-slate-900">{notif.displayDate}</p>
+                            </div>
+                          </div>
 
+                          <div className="flex flex-wrap gap-4 mb-4">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 mb-1">Notification Type</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                                {camelToTitleCase(notif.displayType)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 mb-1">System Status</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-600">
+                                {camelToTitleCase(notif.displayStatus)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 mb-1">Unit</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600">
+                                {camelToTitleCase(notif.displayUnitType)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 mb-1">Priority</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700">
+                                {camelToTitleCase(notif.displayPriority)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mb-3">
+                            <p className="text-[10px] font-bold text-slate-400 mb-1">Reported By</p>
+                            <p className="text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                              {camelToTitleCase(notif.displayReportedBy)}
+                            </p>
+                          </div>
+
+                          <div className="mt-4">
+                            <p className="text-[10px] font-bold text-slate-400 mb-2">Description</p>
+                            <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
+                              {notif.displayDesc1 && notif.displayDesc2 ? (
+                                <>
+                                  <div className="flex items-start">
+                                    <span className="text-slate-500 mr-2 mt-0.5">•</span>
+                                    <span>{camelToTitleCase(notif.displayDesc1)}</span>
+                                  </div>
+                                  <div className="flex items-start">
+                                    <span className="text-slate-500 mr-2 mt-0.5">•</span>
+                                    <span>{camelToTitleCase(notif.displayDesc2)}</span>
+                                  </div>
+                                </>
+                              ) : notif.displayDesc1 ? (
+                                <div className="flex items-start">
+                                  <span className="text-slate-500 mr-2 mt-0.5">•</span>
+                                  <span>{camelToTitleCase(notif.displayDesc1)}</span>
+                                </div>
+                              ) : notif.displayDesc2 ? (
+                                <div className="flex items-start">
+                                  <span className="text-slate-500 mr-2 mt-0.5">•</span>
+                                  <span>{camelToTitleCase(notif.displayDesc2)}</span>
+                                </div>
+                              ) : (
+                                <div className="text-slate-500 italic">No description provided</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
 
@@ -1100,7 +1275,7 @@ const Dashboard = () => {
 
                 <div>
 
-                  <h2 className="text-2xl font-bold text-slate-900">
+                  <h2 className="text-2xl font-normal text-slate-900">
                     Notification Details
                   </h2>
 
@@ -1125,7 +1300,7 @@ const Dashboard = () => {
 
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-bold tracking-widest text-slate-400">
                     Notification ID
                   </p>
 
@@ -1137,7 +1312,7 @@ const Dashboard = () => {
 
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-bold tracking-widest text-slate-400">
                     Equipment
                   </p>
 
@@ -1149,19 +1324,16 @@ const Dashboard = () => {
 
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-bold tracking-widest text-slate-400">
                     Status
                   </p>
 
                   <p className="mt-2 text-lg font-bold text-slate-900">
                     {selectedNotification.status}
                   </p>
+                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                </div>
-
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-bold tracking-widest text-slate-400">
                     Priority
                   </p>
 
@@ -1170,6 +1342,8 @@ const Dashboard = () => {
                   </p>
 
                 </div>
+                </div>
+
 
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">
@@ -1233,56 +1407,7 @@ const Dashboard = () => {
           </div>
 
         )}
-        {selectedEquipment && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
-              <div className="mb-6 flex items-center justify-between border-b pb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Equipment Details</h2>
-                  <p className="text-indigo-600 font-semibold">Equipment: {selectedEquipment.displayEquipId}</p>
-                </div>
-                <button onClick={() => setSelectedEquipment(null)} className="rounded-full bg-slate-100 p-2 hover:bg-slate-200">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                    <p className="text-[10px] font-bold uppercase text-slate-400">Notification ID</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayId}</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                    <p className="text-[10px] font-bold uppercase text-slate-400">Date</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayDate}</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                    <p className="text-[10px] font-bold uppercase text-slate-400">Type</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayType}</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                    <p className="text-[10px] font-bold uppercase text-slate-400">Status</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedEquipment.displayStatus}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
-                  <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Description</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{selectedEquipment.displayDesc}</p>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <button
-                  onClick={() => setSelectedEquipment(null)}
-                  className="rounded-xl bg-slate-900 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-800 transition-all"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {showUploadDialog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

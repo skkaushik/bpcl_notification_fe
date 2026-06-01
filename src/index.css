@@ -132,6 +132,21 @@ textarea {
   animation-delay: 300ms;
 }
 
+@keyframes drawer-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-drawer-from-right {
+  animation: drawer-from-right 300ms ease-out both;
+}
+
 /* Override default react-select option backgrounds */
 .react-select__option {
   background-color: transparent !important;
