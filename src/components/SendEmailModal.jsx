@@ -5,6 +5,7 @@ import NotificationTypeFilter from './NotificationTypeFilter';
 import { emailConfig } from '../data/emailConfig';
 import { sendMailApi } from "../services/emailService";
 import { toast } from "react-toastify";
+import { Mail, LoaderCircle } from "lucide-react";
 
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
@@ -295,49 +296,16 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
             className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-bold text-white transition-all ${emailFilteredNotifications.length === 0 ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
             {isSending ? (
-              <>
-                <svg
-                  className="h-5 w-5 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    className="opacity-25"
-                  />
-                  <path
-                    fill="currentColor"
-                    className="opacity-75"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
-
-                Sending...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8"
-                  />
-                </svg>
-
-                Send Grouped Email
-              </>
-            )}
+  <>
+    <LoaderCircle className="h-5 w-5 animate-spin" />
+    Sending...
+  </>
+) : (
+  <>
+    <Mail className="h-5 w-5" />
+    Send Grouped Email
+  </>
+)}
           </button>
         </div>
       </div>

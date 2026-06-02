@@ -14,6 +14,7 @@
     "@azure/msal-react": "^5.4.2",
     "@google/genai": "^2.7.0",
     "axios": "^1.16.1",
+    "lucide-react": "^1.17.0",
     "openai": "^6.39.0",
     "react": "^19.2.6",
     "react-data-table-component": "^8.3.0",
