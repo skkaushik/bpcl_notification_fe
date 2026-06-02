@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './pages/dashboard';
 import AIAssistantWidget from './components/AIAssistantWidget';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -42,7 +44,13 @@ function App() {
         apiKey={aiApiKey}
         contextData={contextData}
       />
+      <ToastContainer
+  position="top-center"
+  autoClose={3000}
+/>
+
     </div>
+    
   );
 }
 

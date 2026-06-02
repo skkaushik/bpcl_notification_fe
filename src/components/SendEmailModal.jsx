@@ -3,8 +3,12 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import NotificationTypeFilter from './NotificationTypeFilter';
 import { emailConfig } from '../data/emailConfig';
+import { sendMailApi } from "../services/emailService";
+import { toast } from "react-toastify";
+
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
+  const [isSending, setIsSending] = useState(false);
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
   const [dateRange, setDateRange] = useState([null, null]);
   const datePickerRef = useRef(null);
@@ -105,6 +109,60 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     });
     return groups;
   }, [emailFilteredNotifications]);
+
+  const handleSendEmail = async () => {
+    if (emailFilteredNotifications.length === 0) {
+      alert("There are 0 matching notifications. Please adjust your filters or re-upload the Excel file to refresh the data.");
+      return;
+    }
+
+    const targetEmails = Object.keys(emailGroups);
+    if (targetEmails.length === 0) {
+      alert("No matching emails found for current filters.");
+      return;
+    }
+
+    console.log("=== Grouped Email Mapping ===");
+    console.log("The following emails would receive these notifications:");
+    Object.entries(emailGroups).forEach(([email, notifs]) => {
+      console.log(`Email: ${email} -> Notification IDs:`, notifs.map(n => n.id));
+    });
+    console.log("===============================");
+
+    const to = targetEmails.join(',');
+    const subject = `Filtered Notifications Alert`;
+    let bodyStr = `Hello,\n\nPlease review the following notifications based on your filters:\n\n`;
+    Object.entries(emailGroups).forEach(([email, notifs]) => {
+      bodyStr += `[For ${email}]: ${notifs.map(n => n.id).join(', ')}\n`;
+    });
+    bodyStr += `\nThank you.`;
+    try {
+      setIsSending(true);
+
+      await Promise.all([
+        sendMailApi({
+          to,
+          subject,
+          text: bodyStr,
+        }),
+      ]);
+
+      onClose();
+
+      toast.success("Email sent successfully!", {
+        autoClose: 3000,
+      });
+
+    } catch (error) {
+      console.error(error);
+
+      toast.error("Failed to send email", {
+        autoClose: 3000,
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -232,49 +290,54 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
 
         <div className="mt-8 flex justify-end gap-3">
           <button
-            onClick={() => {
-              if (emailFilteredNotifications.length === 0) {
-                alert("There are 0 matching notifications. Please adjust your filters or re-upload the Excel file to refresh the data.");
-                return;
-              }
-
-              const targetEmails = Object.keys(emailGroups);
-              if (targetEmails.length === 0) {
-                alert("No matching emails found for current filters.");
-                return;
-              }
-
-              console.log("=== Grouped Email Mapping ===");
-              console.log("The following emails would receive these notifications:");
-              Object.entries(emailGroups).forEach(([email, notifs]) => {
-                console.log(`Email: ${email} -> Notification IDs:`, notifs.map(n => n.id));
-              });
-              console.log("===============================");
-
-              const to = targetEmails.join(',');
-              const subject = `Filtered Notifications Alert`;
-
-              let bodyStr = `Hello,\n\nPlease review the following notifications based on your filters:\n\n`;
-              Object.entries(emailGroups).forEach(([email, notifs]) => {
-                bodyStr += `[For ${email}]: ${notifs.map(n => n.id).join(', ')}\n`;
-              });
-              bodyStr += `\nThank you.`;
-
-              const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyStr)}`;
-
-              try {
-                navigator.clipboard.writeText(`To: ${to}\nSubject: ${subject}\n\n${bodyStr}`);
-                alert("Email content copied to clipboard! Opening your mail client...");
-              } catch (err) {
-                console.error("Failed to copy", err);
-              }
-
-              window.location.href = mailtoLink;
-            }}
+            onClick={handleSendEmail}
+            disabled={isSending}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-bold text-white transition-all ${emailFilteredNotifications.length === 0 ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            Send Grouped Email
+            {isSending ? (
+              <>
+                <svg
+                  className="h-5 w-5 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    className="opacity-25"
+                  />
+                  <path
+                    fill="currentColor"
+                    className="opacity-75"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+
+                Sending...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8"
+                  />
+                </svg>
+
+                Send Grouped Email
+              </>
+            )}
           </button>
         </div>
       </div>
