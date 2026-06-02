@@ -85,7 +85,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
   };
 
   return (
-    <div className="mb-8">
+    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
       <div className="mb-5 flex items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">{title}</h3>
       </div>
