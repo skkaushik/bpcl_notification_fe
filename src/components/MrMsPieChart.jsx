@@ -61,7 +61,7 @@ const MrMsPieChart = ({ data = [] }) => {
   }, [chartData]);
 
   return (
-    <div className="w-full h-full flex flex-col items-center">
+    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden flex flex-col items-center justify-center w-full h-full">
       <div className="mb-5 flex w-full items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">MR vs MS Overview</h3>
       </div>

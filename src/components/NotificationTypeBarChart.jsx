@@ -140,7 +140,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
   }, [data]);
 
   return (
-    <div>
+    <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
 
       <div className="mb-5 flex items-center justify-between">
         <div>
