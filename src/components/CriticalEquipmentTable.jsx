@@ -1,90 +1,4 @@
-import React from 'react';
 import DataTable from 'react-data-table-component';
-
-const customStyles = {
-  headRow: {
-    style: {
-      backgroundColor: '#EEF2FF',
-      borderTopLeftRadius: '16px',
-      borderTopRightRadius: '16px',
-      borderBottomWidth: '1px',
-      borderBottomColor: '#E0E7FF',
-      minHeight: '56px',
-    },
-  },
-  headCells: {
-    style: {
-      fontSize: '13px',
-      fontWeight: 'bold',
-      color: '#3730A3',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-    },
-  },
-  rows: {
-    style: {
-      minHeight: '64px',
-      fontSize: '14px',
-      color: '#334155',
-      backgroundColor: '#FFFFFF',
-      cursor: 'pointer',
-      '&:hover': {
-        backgroundColor: '#F8FAFC',
-        cursor: 'pointer',
-      },
-    },
-    stripedStyle: {
-      color: '#334155',
-      backgroundColor: '#F8FAFC',
-    },
-  },
-  pagination: {
-    style: {
-      borderTopWidth: '1px',
-      borderTopColor: '#E2E8F0',
-      borderBottomLeftRadius: '16px',
-      borderBottomRightRadius: '16px',
-    },
-  },
-};
-
-const criticalEquipmentColumns = [
-  {
-    name: "Equipment ID",
-    selector: row => row.displayEquipId,
-    sortable: true,
-  },
-  {
-    name: "Notification Type",
-    selector: row => row.displayType,
-    sortable: true,
-  },
-  {
-    name: "Unit Type",
-    selector: row => row.displayUnitType,
-    sortable: true,
-  },
-  {
-    name: "Total Count",
-    selector: row => row.notificationCount,
-    sortable: true,
-    cell: row => (
-      <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700">
-        {row.notificationCount}
-      </span>
-    ),
-  },
-  {
-    name: "Priority",
-    selector: row => row.displayPriority,
-    sortable: true,
-    cell: row => (
-      <span className="inline-flex items-center justify-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700">
-        {row.displayPriority || 'N/A'}
-      </span>
-    ),
-  },
-];
 
 const CriticalEquipmentTable = ({
   searchQuery,
@@ -93,8 +7,46 @@ const CriticalEquipmentTable = ({
   selectedEquipment,
   setSelectedEquipment
 }) => {
+  const criticalEquipmentColumns = [
+    {
+      name: "Equipment ID",
+      selector: row => row.displayEquipId,
+      sortable: true,
+    },
+    {
+      name: "Notification Type",
+      selector: row => row.displayType,
+      sortable: true,
+    },
+    {
+      name: "Unit Type",
+      selector: row => row.displayUnitType,
+      sortable: true,
+    },
+    {
+      name: "Total Count",
+      selector: row => row.notificationCount,
+      sortable: true,
+      cell: row => (
+        <span className="inline-flex items-center justify-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700">
+          {row.notificationCount}
+        </span>
+      ),
+    },
+    {
+      name: "Priority",
+      selector: row => row.displayPriority,
+      sortable: true,
+      cell: row => (
+        <span className="inline-flex items-center justify-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700">
+          {row.displayPriority || 'N/A'}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className={`${selectedEquipment ? 'w-full xl:flex-1 xl:min-w-0' : 'w-full'} bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden transition-all duration-300`}>
+    <div className="flex-1 min-w-0 w-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold text-slate-900">
@@ -114,11 +66,10 @@ const CriticalEquipmentTable = ({
           />
         </div>
       </div>
-      <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden [&_.rdt_TableHeadRow]:!bg-indigo-50 [&_.rdt_TableHeadRow]:!border-b [&_.rdt_TableHeadRow]:!border-indigo-100 [&_.rdt_TableHeadRow]:!min-h-[56px] [&_.rdt_TableHeadRow]:!rounded-t-2xl [&_.rdt_TableCol]:!text-[13px] [&_.rdt_TableCol]:!font-bold [&_.rdt_TableCol]:!text-indigo-800 [&_.rdt_TableCol]:!uppercase [&_.rdt_TableCol]:!tracking-[0.05em] [&_.rdt_TableRow]:!min-h-[64px] [&_.rdt_TableRow]:!text-sm [&_.rdt_TableRow]:!text-slate-700 [&_.rdt_TableRow]:!bg-white [&_.rdt_TableRow]:!cursor-pointer hover:[&_.rdt_TableRow]:!bg-slate-50 [&_.rdt_TableRow:nth-child(odd)]:!bg-slate-50 [&_.rdt_Pagination]:!border-t [&_.rdt_Pagination]:!border-slate-200 [&_.rdt_Pagination]:!rounded-b-2xl">
         <DataTable
           columns={criticalEquipmentColumns}
           data={filteredCriticalEquipmentData}
-          customStyles={customStyles}
           onRowClicked={(row) => setSelectedEquipment(prev => prev && prev.displayEquipId === row.displayEquipId ? null : row)}
           pagination
           paginationPerPage={10}

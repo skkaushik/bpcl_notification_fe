@@ -465,7 +465,7 @@ const Dashboard = () => {
 
             <TotalDueNotificationsChart data={dueChartData} />
 
-            <div className={`mt-8 transition-all duration-300 ${selectedEquipment ? 'flex flex-col gap-6 xl:flex-row xl:items-start' : ''}`}>
+            <div className="mt-8 flex gap-6 items-start overflow-hidden">
               <CriticalEquipmentTable
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
