@@ -190,7 +190,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleSendEmail = (notification) => {
+  const handleSendEmail = async(notification) => {
     if (!notification) return;
     const type = String(notification.type ?? '').trim().toUpperCase();
     const rawUnit = String(notification.workCtr ?? '').trim().toUpperCase();
@@ -222,15 +222,23 @@ const Dashboard = () => {
         targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
       }
     }
+ if (targetEmail) {
+    const subject = encodeURIComponent(
+      `Notification Alert: ${notification.id} - ${notification.equip}`
+    );
 
-    if (targetEmail) {
-      const subject = encodeURIComponent(`Notification Alert: ${notification.id} - ${notification.equip}`);
-      const body = encodeURIComponent(`Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`);
-      window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
-    } else {
-      alert(`No email configuration found for plant: ${plantName} with prefix ${prefix}`);
-    }
-  };
+    const body = encodeURIComponent(
+      `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
+    );
+
+    window.location.href =
+      `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+  } else {
+    alert(
+      `No email configuration found for plant: ${plantName} with prefix ${prefix}`
+    );
+  }
+};
 
   const processUploadedFile = async () => {
     if (!selectedFile) return;
