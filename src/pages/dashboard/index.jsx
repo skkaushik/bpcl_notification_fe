@@ -190,6 +190,16 @@ const Dashboard = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+  const savedNotifications = localStorage.getItem("notifications");
+  const savedRawData = localStorage.getItem("rawData");
+
+  if (savedNotifications && savedRawData) {
+    setNotifications(JSON.parse(savedNotifications));
+    setRawData(JSON.parse(savedRawData));
+  }
+}, []);
+
   const handleSendEmail = async(notification) => {
     if (!notification) return;
     const type = String(notification.type ?? '').trim().toUpperCase();
@@ -344,6 +354,15 @@ const Dashboard = () => {
 
       setNotifications(updatedNotifications);
       setRawData(jsonData);
+      localStorage.setItem(
+        "notifications",
+        JSON.stringify(updatedNotifications)
+      );
+
+      localStorage.setItem(
+        "rawData",
+        JSON.stringify(jsonData)
+      );
       setSelectedFile(null);
 
       setTimeout(() => {

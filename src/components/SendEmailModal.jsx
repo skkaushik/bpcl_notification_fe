@@ -234,14 +234,16 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
               </button>
             </div>
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">
-              Notification Type
-            </label>
-            <NotificationTypeFilter
-              value={emailActiveTypeFilter}
-              onChange={setEmailActiveTypeFilter}
-            />
+          <div className="flex flex-col justify-center">
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2">
+                Notification Type:
+              </span>
+              <NotificationTypeFilter
+                value={emailActiveTypeFilter}
+                onChange={setEmailActiveTypeFilter}
+              />
+            </div>
           </div>
         </div>
 

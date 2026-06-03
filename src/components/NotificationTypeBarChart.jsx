@@ -154,8 +154,8 @@ const NotificationTypeBarChart = ({ data = [] }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="min-w-[600px] h-[300px] sm:h-[360px]">
+      <div className="w-full">
+        <div className="h-[300px] sm:h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
