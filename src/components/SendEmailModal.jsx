@@ -3,8 +3,8 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import NotificationTypeFilter from './NotificationTypeFilter';
 import { emailConfig } from '../data/emailConfig';
-import { sendMailApi } from "../services/emailService";
-import { toast } from "react-toastify";
+//import { sendMailApi } from "../services/emailService";
+//import { toast } from "react-toastify";
 import { Mail, LoaderCircle } from "lucide-react";
 
 
@@ -137,33 +137,41 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
       bodyStr += `[For ${email}]: ${notifs.map(n => n.id).join(', ')}\n`;
     });
     bodyStr += `\nThank you.`;
-    try {
-      setIsSending(true);
+    // try {
+    //   setIsSending(true);
 
-      await Promise.all([
-        sendMailApi({
-          to,
-          subject,
-          text: bodyStr,
-        }),
-      ]);
+    //   await Promise.all([
+    //     sendMailApi({
+    //       to,
+    //       subject,
+    //       text: bodyStr,
+    //     }),
+    //   ]);
 
-      onClose();
+    //   onClose();
 
-      toast.success("Email sent successfully!", {
-        autoClose: 3000,
-      });
+    //   toast.success("Email sent successfully!", {
+    //     autoClose: 3000,
+    //   });
 
-    } catch (error) {
-      console.error(error);
+    // } catch (error) {
+    //   console.error(error);
 
-      toast.error("Failed to send email", {
-        autoClose: 3000,
-      });
-    } finally {
-      setIsSending(false);
-    }
-  }
+    //   toast.error("Failed to send email", {
+    //     autoClose: 3000,
+    //   });
+    // } finally {
+    //   setIsSending(false);
+    // }
+
+  setIsSending(true);
+  const mailtoUrl =
+    `mailto:${to}` +
+    `?subject=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(bodyStr)}`;
+  window.location.href = mailtoUrl;
+  onClose();
+     };
 
   if (!isOpen) return null;
 
@@ -293,6 +301,13 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
 
         <div className="mt-8 flex justify-end gap-3">
           <button
+  onClick={handleSendEmail}
+  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-4 text-sm font-bold text-white hover:bg-indigo-700"
+>
+  <Mail className="h-5 w-5" />
+  Send Grouped Email
+</button>
+          {/* <button
             onClick={handleSendEmail}
             disabled={isSending}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-bold text-white transition-all ${emailFilteredNotifications.length === 0 ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
@@ -308,7 +323,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     Send Grouped Email
   </>
 )}
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
