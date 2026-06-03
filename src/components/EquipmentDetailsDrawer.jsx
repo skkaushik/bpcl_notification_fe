@@ -5,13 +5,12 @@ const EquipmentDetailsDrawer = ({
 }) => {
   return (
     <div
-      className={`bg-white border-[#E5E7EB] shadow-lg overflow-hidden flex flex-col xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-        selectedEquipment
-          ? 'flex-[0_0_360px] translate-x-0 opacity-100 border rounded-[24px]'
+      className={`bg-white border-[#E5E7EB] shadow-lg overflow-hidden flex flex-col xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment
+          ? 'flex-[0_0_580px] translate-x-0 opacity-100 border rounded-[24px]'
           : 'flex-[0_0_0px] translate-x-full opacity-0 border-0 rounded-none'
-      }`}
+        }`}
     >
-      <div className="w-[360px] h-full flex flex-col">
+      <div className="w-[580px] h-full flex flex-col">
         <div className="flex-shrink-0 p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Equipment Details</h2>

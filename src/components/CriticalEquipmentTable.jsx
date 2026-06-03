@@ -12,16 +12,25 @@ const CriticalEquipmentTable = ({
       name: "Equipment ID",
       selector: row => row.displayEquipId,
       sortable: true,
+      wrap: true,
+    },
+    {
+      name: "Notification ID",
+      selector: row => row.displayNotificationIds,
+      sortable: true,
+      wrap: true,
     },
     {
       name: "Notification Type",
       selector: row => row.displayType,
       sortable: true,
+      wrap: true,
     },
     {
-      name: "Unit Type",
-      selector: row => row.displayUnitType,
+      name: "Unit Name",
+      selector: row => row.displayUnitName,
       sortable: true,
+      wrap: true,
     },
     {
       name: "Total Count",
