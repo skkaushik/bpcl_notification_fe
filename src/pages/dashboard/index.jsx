@@ -248,8 +248,10 @@ const Dashboard = () => {
       `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
     );
 
-    window.location.href =
-      `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+    window.open(
+      `mailto:${targetEmail}?subject=${subject}&body=${body}`,
+      '_blank'
+    );
   } else {
     alert(
       `No email configuration found for plant: ${plantName} with prefix ${prefix}`
@@ -323,6 +325,9 @@ const Dashboard = () => {
       const requiredEndKey = findKey(sample, ['Required End', 'RequiredEnd']);
       const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
       const priorityKey = findKey(sample, ['Priority']);
+      const sysStatusKey = findKey(sample, ['System status', 'Systemstatus', 'System Status']);
+      const desc1Key = Object.keys(sample).find((k) => k.toLowerCase() === "description");
+      const desc2Key = Object.keys(sample).find((k) => k.toLowerCase() === "description2" || k.toLowerCase() === "description 2");
 
       setProcessingPercent(90);
       await yieldToMain();
@@ -347,6 +352,8 @@ const Dashboard = () => {
             id: row[notificationKey] || `N-${idx + 1}`,
             equip: row[equipmentKey] || 'Unknown equipment',
             status: String(row[statusKey] || '').toUpperCase().trim() || 'N/A',
+            sysStatus: String(row[sysStatusKey] || '').toUpperCase().trim() || 'N/A',
+            description: String(row[desc1Key] || '').trim() + (row[desc2Key] ? ' ' + String(row[desc2Key] || '').trim() : ''),
             type: row[typeKey] || 'N/A',
             workCtr: row[workCtrKey] || 'N/A',
             requiredEnd: parseDate(row[requiredEndKey]),
@@ -499,7 +506,7 @@ const Dashboard = () => {
 
             <TotalDueNotificationsChart data={dueChartData} />
 
-            <div className="mt-8 flex gap-6 items-start overflow-hidden">
+            <div className="mt-8 flex gap-6 items-stretch overflow-hidden">
               <CriticalEquipmentTable
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -508,10 +515,12 @@ const Dashboard = () => {
                 setSelectedEquipment={setSelectedEquipment}
               />
 
-              <EquipmentDetailsDrawer
-                selectedEquipment={selectedEquipment}
-                setSelectedEquipment={setSelectedEquipment}
-              />
+              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[580px]' : 'w-0'}`}>
+                <EquipmentDetailsDrawer
+                  selectedEquipment={selectedEquipment}
+                  setSelectedEquipment={setSelectedEquipment}
+                />
+              </div>
             </div>
           </>
         ) : (

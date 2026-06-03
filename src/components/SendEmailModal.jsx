@@ -120,29 +120,42 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     });
     console.log("===============================");
 
-    const subject = `Filtered Notifications Alert`;
-
     // Send individual emails to each recipient with their specific notifications
     const emailsToOpen = [];
     
     Object.entries(emailGroups).forEach(([email, notifs]) => {
+      // Determine the plant name for the subject
+      let rawUnit = String(notifs[0]?.workCtr ?? '').trim().toUpperCase();
+      let plantName = rawUnit;
+      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
+        plantName = rawUnit.substring(2).trim();
+      }
+      
+      const subject = `Pending Notifications - ${plantName} (More Than 1 Days)`;
+
       // Build body for this specific email recipient
-      let bodyStr = `FILTERED NOTIFICATION ALERT\n\n`;
-      bodyStr += `Dear Team,\n\n`;
-      bodyStr += `Please find below the notifications assigned to you:\n\n`;
-      bodyStr += `=================================================\n`;
-      bodyStr += `Notification Count: ${notifs.length}\n`;
-      bodyStr += `=================================================\n\n`;
-      bodyStr += `Notification\tType\tStatus\tWorkCtr\tDate\n`;
-      bodyStr += `---------------------------------------------------------\n`;
+      let bodyStr = `Dear Sir,\n\n`;
+      bodyStr += `Please find Below the notifications pending for more than 1 days:\n\n`;
+      bodyStr += `Plant name\tNotification no\tNotification Date\tNotification Type\tDescription\tDays Pending\tUser status\tSystem status\n`;
 
       notifs.forEach((n) => {
-        bodyStr += `${n.id}\t${n.type}\t${n.status}\t${n.workCtr}\t${String(n.notifDate)}\n`;
+        let daysPending = '0';
+        if (n.notifDate && n.notifDate !== 'N/A') {
+          const notifD = new Date(n.notifDate);
+          if (!isNaN(notifD)) {
+            const diffTime = Math.abs(new Date() - notifD);
+            daysPending = Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
+          }
+        }
+        
+        let desc = (n.description || '').replace(/\r?\n|\r/g, " ").substring(0, 60);
+        let dateStr = n.notifDate !== 'N/A' ? n.notifDate : '';
+        
+        bodyStr += `${n.workCtr}\t${n.id}\t${dateStr}\t${n.type}\t${desc}\t${daysPending}\t${n.status}\t${n.sysStatus}\n`;
       });
 
-      bodyStr += `\n=================================================\n`;
-      bodyStr += `Thank you.\n`;
-      bodyStr += `\nBest Regards,\nNotification System`;
+      bodyStr += `\nKindly take necessary action.\n\n`;
+      bodyStr += `Regards,\nMechanical Maintenance Team`;
 
       // Create mailto link - use proper encoding for Outlook compatibility
       const encodedSubject = encodeURIComponent(subject);
@@ -161,22 +174,15 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     emailsToOpen.forEach((emailObj) => {
       setTimeout(() => {
         try {
-          // Try to open the mailto link
-          const link = document.createElement('a');
-          link.href = emailObj.url;
-          link.click();
-          
-          // Fallback: also try window.open for web email clients
           window.open(emailObj.url, '_blank');
         } catch (error) {
           console.error(`Error opening mailto for ${emailObj.recipient}:`, error);
         }
       }, delayTime);
-      delayTime += 500; // 500ms delay between each email
+      delayTime += 800; // 800ms delay between each email to ensure Outlook opens separate drafts
     });
 
     onClose();
-    alert(`Opening ${targetEmails.length} email(s). Check your email client (Gmail, Outlook, etc.). If nothing opens, you may need to manually copy-paste the email addresses.`);
   };
 
   if (!isOpen) return null;
