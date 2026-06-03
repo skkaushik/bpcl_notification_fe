@@ -132,10 +132,35 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
 
     const to = targetEmails.join(',');
     const subject = `Filtered Notifications Alert`;
-    let bodyStr = `Hello,\n\nPlease review the following notifications based on your filters:\n\n`;
-    Object.entries(emailGroups).forEach(([email, notifs]) => {
-      bodyStr += `[For ${email}]: ${notifs.map(n => n.id).join(', ')}\n`;
-    });
+    let bodyStr =
+`FILTERED NOTIFICATION ALERT
+
+`;
+
+Object.entries(emailGroups).forEach(
+([email, notifs]) => {
+
+bodyStr += `
+=================================================
+EMAIL : ${email}
+=================================================
+
+Notification      Type      Status      WorkCtr      Date
+---------------------------------------------------------
+`;
+
+notifs.forEach((n) => {
+
+bodyStr +=
+`${n.id}      ${n.type}      ${n.status}      ${n.workCtr}      ${n.notifDate}
+
+`;
+
+});
+
+bodyStr += "\n\n";
+
+});
     bodyStr += `\nThank you.`;
     // try {
     //   setIsSending(true);
