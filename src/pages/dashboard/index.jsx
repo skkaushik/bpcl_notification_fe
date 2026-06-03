@@ -325,6 +325,9 @@ const Dashboard = () => {
       const requiredEndKey = findKey(sample, ['Required End', 'RequiredEnd']);
       const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
       const priorityKey = findKey(sample, ['Priority']);
+      const sysStatusKey = findKey(sample, ['System status', 'Systemstatus', 'System Status']);
+      const desc1Key = Object.keys(sample).find((k) => k.toLowerCase() === "description");
+      const desc2Key = Object.keys(sample).find((k) => k.toLowerCase() === "description2" || k.toLowerCase() === "description 2");
 
       setProcessingPercent(90);
       await yieldToMain();
@@ -349,6 +352,8 @@ const Dashboard = () => {
             id: row[notificationKey] || `N-${idx + 1}`,
             equip: row[equipmentKey] || 'Unknown equipment',
             status: String(row[statusKey] || '').toUpperCase().trim() || 'N/A',
+            sysStatus: String(row[sysStatusKey] || '').toUpperCase().trim() || 'N/A',
+            description: String(row[desc1Key] || '').trim() + (row[desc2Key] ? ' ' + String(row[desc2Key] || '').trim() : ''),
             type: row[typeKey] || 'N/A',
             workCtr: row[workCtrKey] || 'N/A',
             requiredEnd: parseDate(row[requiredEndKey]),
