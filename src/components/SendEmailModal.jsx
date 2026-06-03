@@ -1,21 +1,16 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import NotificationTypeFilter from './NotificationTypeFilter';
 import { emailConfig } from '../data/emailConfig';
-import { sendMailApi } from "../services/emailService";
-import { toast } from "react-toastify";
-import { Mail, LoaderCircle } from "lucide-react";
-
+import { Mail } from "lucide-react";
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
-  const [isSending, setIsSending] = useState(false);
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
   const [dateRange, setDateRange] = useState([null, null]);
   const datePickerRef = useRef(null);
   const [startDateFilter, endDateFilter] =
     dateRange;
-  const [ageDayFilter, setAgeDayFilter] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -43,8 +38,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
       );
     }
 
-    if (startDateFilter || endDateFilter || ageDayFilter) {
-      const today = new Date();
+    if (startDateFilter || endDateFilter) {
 
       result = result.filter(n => {
         let passDate = true;
@@ -66,10 +60,6 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
               passDate &&
               notifDate <= end;
           }
-          if (ageDayFilter) {
-            const ageDays = Math.floor((today - notifDate) / (1000 * 60 * 60 * 24));
-            passAge = ageDays >= parseInt(ageDayFilter, 10);
-          }
         } else {
           passDate = false;
         }
@@ -79,7 +69,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     }
 
     return result;
-  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageDayFilter]);
+  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter]);
 
   const emailGroups = useMemo(() => {
     const groups = {};
@@ -130,40 +120,41 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     });
     console.log("===============================");
 
-    const to = targetEmails.join(',');
     const subject = `Filtered Notifications Alert`;
-    let bodyStr = `Hello,\n\nPlease review the following notifications based on your filters:\n\n`;
+
+    // Send individual emails to each recipient with their specific notifications
     Object.entries(emailGroups).forEach(([email, notifs]) => {
-      bodyStr += `[For ${email}]: ${notifs.map(n => n.id).join(', ')}\n`;
+      // Build body for this specific email recipient
+      let bodyStr = `FILTERED NOTIFICATION ALERT\n\n`;
+      bodyStr += `Dear Team,\n\n`;
+      bodyStr += `Please find below the notifications assigned to you:\n\n`;
+      bodyStr += `=================================================\n`;
+      bodyStr += `Notification Count: ${notifs.length}\n`;
+      bodyStr += `=================================================\n\n`;
+      bodyStr += `Notification\t\tType\t\tStatus\t\tWorkCtr\t\tDate\n`;
+      bodyStr += `---------------------------------------------------------\n`;
+
+      notifs.forEach((n) => {
+        bodyStr += `${n.id}\t\t${n.type}\t\t${n.status}\t\t${n.workCtr}\t\t${n.notifDate}\n`;
+      });
+
+      bodyStr += `\n=================================================\n`;
+      bodyStr += `Thank you.\n`;
+      bodyStr += `\nBest Regards,\nNotification System`;
+
+      // Create mailto link for this recipient
+      const mailtoUrl =
+        `mailto:${email}` +
+        `?subject=${encodeURIComponent(subject)}` +
+        `&body=${encodeURIComponent(bodyStr)}`;
+
+      // Open mailto in new window for each recipient
+      window.open(mailtoUrl, "_blank");
     });
-    bodyStr += `\nThank you.`;
-    try {
-      setIsSending(true);
 
-      await Promise.all([
-        sendMailApi({
-          to,
-          subject,
-          text: bodyStr,
-        }),
-      ]);
-
-      onClose();
-
-      toast.success("Email sent successfully!", {
-        autoClose: 3000,
-      });
-
-    } catch (error) {
-      console.error(error);
-
-      toast.error("Failed to send email", {
-        autoClose: 3000,
-      });
-    } finally {
-      setIsSending(false);
-    }
-  }
+    onClose();
+    alert(`Email clients opened for ${targetEmails.length} recipient(s). Please send each email individually.`);
+  };
 
   if (!isOpen) return null;
 
@@ -294,6 +285,13 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
         <div className="mt-8 flex justify-end gap-3">
           <button
             onClick={handleSendEmail}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-4 text-sm font-bold text-white hover:bg-indigo-700"
+          >
+            <Mail className="h-5 w-5" />
+            Send Grouped Email
+          </button>
+          {/* <button
+            onClick={handleSendEmail}
             disabled={isSending}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-bold text-white transition-all ${emailFilteredNotifications.length === 0 ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
@@ -308,7 +306,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     Send Grouped Email
   </>
 )}
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
