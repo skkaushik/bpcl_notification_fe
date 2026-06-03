@@ -248,8 +248,10 @@ const Dashboard = () => {
       `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
     );
 
-    window.location.href =
-      `mailto:${targetEmail}?subject=${subject}&body=${body}`;
+    window.open(
+      `mailto:${targetEmail}?subject=${subject}&body=${body}`,
+      '_blank'
+    );
   } else {
     alert(
       `No email configuration found for plant: ${plantName} with prefix ${prefix}`
@@ -499,7 +501,7 @@ const Dashboard = () => {
 
             <TotalDueNotificationsChart data={dueChartData} />
 
-            <div className="mt-8 flex gap-6 items-start overflow-hidden">
+            <div className="mt-8 flex gap-6 items-stretch overflow-hidden">
               <CriticalEquipmentTable
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -508,10 +510,12 @@ const Dashboard = () => {
                 setSelectedEquipment={setSelectedEquipment}
               />
 
-              <EquipmentDetailsDrawer
-                selectedEquipment={selectedEquipment}
-                setSelectedEquipment={setSelectedEquipment}
-              />
+              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[580px]' : 'w-0'}`}>
+                <EquipmentDetailsDrawer
+                  selectedEquipment={selectedEquipment}
+                  setSelectedEquipment={setSelectedEquipment}
+                />
+              </div>
             </div>
           </>
         ) : (

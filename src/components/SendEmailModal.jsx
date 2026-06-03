@@ -161,18 +161,12 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     emailsToOpen.forEach((emailObj) => {
       setTimeout(() => {
         try {
-          // Try to open the mailto link
-          const link = document.createElement('a');
-          link.href = emailObj.url;
-          link.click();
-          
-          // Fallback: also try window.open for web email clients
           window.open(emailObj.url, '_blank');
         } catch (error) {
           console.error(`Error opening mailto for ${emailObj.recipient}:`, error);
         }
       }, delayTime);
-      delayTime += 500; // 500ms delay between each email
+      delayTime += 800; // 800ms delay between each email to ensure Outlook opens separate drafts
     });
 
     onClose();
