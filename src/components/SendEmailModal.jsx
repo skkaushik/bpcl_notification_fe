@@ -123,6 +123,8 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
     const subject = `Filtered Notifications Alert`;
 
     // Send individual emails to each recipient with their specific notifications
+    const emailsToOpen = [];
+    
     Object.entries(emailGroups).forEach(([email, notifs]) => {
       // Build body for this specific email recipient
       let bodyStr = `FILTERED NOTIFICATION ALERT\n\n`;
@@ -131,29 +133,50 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
       bodyStr += `=================================================\n`;
       bodyStr += `Notification Count: ${notifs.length}\n`;
       bodyStr += `=================================================\n\n`;
-      bodyStr += `Notification\t\tType\t\tStatus\t\tWorkCtr\t\tDate\n`;
+      bodyStr += `Notification\tType\tStatus\tWorkCtr\tDate\n`;
       bodyStr += `---------------------------------------------------------\n`;
 
       notifs.forEach((n) => {
-        bodyStr += `${n.id}\t\t${n.type}\t\t${n.status}\t\t${n.workCtr}\t\t${n.notifDate}\n`;
+        bodyStr += `${n.id}\t${n.type}\t${n.status}\t${n.workCtr}\t${String(n.notifDate)}\n`;
       });
 
       bodyStr += `\n=================================================\n`;
       bodyStr += `Thank you.\n`;
       bodyStr += `\nBest Regards,\nNotification System`;
 
-      // Create mailto link for this recipient
-      const mailtoUrl =
-        `mailto:${email}` +
-        `?subject=${encodeURIComponent(subject)}` +
-        `&body=${encodeURIComponent(bodyStr)}`;
+      // Create mailto link - use proper encoding for Outlook compatibility
+      const encodedSubject = encodeURIComponent(subject);
+      const encodedBody = encodeURIComponent(bodyStr);
+      
+      const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`;
+      
+      emailsToOpen.push({
+        url: mailtoUrl,
+        recipient: email
+      });
+    });
 
-      // Open mailto in new window for each recipient
-      window.open(mailtoUrl, "_blank");
+    // Open all mailto links with slight delays for better Outlook compatibility
+    let delayTime = 0;
+    emailsToOpen.forEach((emailObj) => {
+      setTimeout(() => {
+        try {
+          // Try to open the mailto link
+          const link = document.createElement('a');
+          link.href = emailObj.url;
+          link.click();
+          
+          // Fallback: also try window.open for web email clients
+          window.open(emailObj.url, '_blank');
+        } catch (error) {
+          console.error(`Error opening mailto for ${emailObj.recipient}:`, error);
+        }
+      }, delayTime);
+      delayTime += 500; // 500ms delay between each email
     });
 
     onClose();
-    alert(`Email clients opened for ${targetEmails.length} recipient(s). Please send each email individually.`);
+    alert(`Opening ${targetEmails.length} email(s). Check your email client (Gmail, Outlook, etc.). If nothing opens, you may need to manually copy-paste the email addresses.`);
   };
 
   if (!isOpen) return null;

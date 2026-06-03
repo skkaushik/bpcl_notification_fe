@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailto Test - Browser & Outlook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .test-btn {
+            background: #0078d4;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .test-btn:hover {
+            background: #106ebe;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-left: 4px solid #0078d4;
+            border-radius: 4px;
+        }
+        .success { border-left-color: #28a745; background: #f1f9f6; }
+        .error { border-left-color: #dc3545; background: #fdf3f3; }
+        .info { border-left-color: #0078d4; background: #f0f7ff; }
+        .code {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 Mailto Test - Browser & Outlook</h1>
+        <p>Test if mailto links work in your browser and Outlook app.</p>
+        
+        <h2>Test Methods:</h2>
+        
+        <button class="test-btn" onclick="testSimpleMailto()">Test 1: Simple Mailto</button>
+        <button class="test-btn" onclick="testMailtoWithSubject()">Test 2: With Subject</button>
+        <button class="test-btn" onclick="testMailtoWithBody()">Test 3: With Body</button>
+        <button class="test-btn" onclick="testAnchorClick()">Test 4: Anchor Click Method</button>
+        <button class="test-btn" onclick="testOutlook()">Test 5: Outlook Specific</button>
+        <button class="test-btn" onclick="clearResults()">Clear Results</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function log(title, message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultElement = document.createElement('div');
+            resultElement.className = `result ${type}`;
+            resultElement.innerHTML = `
+                <strong>${title}</strong><br>
+                ${message}<br>
+                <small>Timestamp: ${new Date().toLocaleTimeString()}</small>
+            `;
+            resultsDiv.appendChild(resultElement);
+            console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
+        }
+
+        function testSimpleMailto() {
+            try {
+                const email = 'test@example.com';
+                window.location.href = `mailto:${email}`;
+                log('Simple Mailto', `Opened: mailto:${email}`, 'success');
+            } catch (error) {
+                log('Simple Mailto', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testMailtoWithSubject() {
+            try {
+                const email = 'test@example.com';
+                const subject = 'Test Subject';
+                const encoded = encodeURIComponent(subject);
+                window.location.href = `mailto:${email}?subject=${encoded}`;
+                log('Mailto with Subject', `Opened: mailto:${email}?subject=${encoded}`, 'success');
+            } catch (error) {
+                log('Mailto with Subject', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testMailtoWithBody() {
+            try {
+                const email = 'test@example.com';
+                const subject = 'Test Subject';
+                const body = 'This is a test email body with some content.';
+                const encodedSubject = encodeURIComponent(subject);
+                const encodedBody = encodeURIComponent(body);
+                const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`;
+                window.location.href = mailtoUrl;
+                log('Mailto with Subject & Body', `Opened complete mailto link`, 'success');
+            } catch (error) {
+                log('Mailto with Subject & Body', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testAnchorClick() {
+            try {
+                const email = 'test@example.com';
+                const subject = 'Test Subject';
+                const body = 'This is a test email body.';
+                const encodedSubject = encodeURIComponent(subject);
+                const encodedBody = encodeURIComponent(body);
+                const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`;
+                
+                const link = document.createElement('a');
+                link.href = mailtoUrl;
+                link.click();
+                
+                log('Anchor Click Method', `Used document.createElement + click method`, 'success');
+            } catch (error) {
+                log('Anchor Click Method', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testOutlook() {
+            try {
+                const email = 'test@example.com';
+                const subject = encodeURIComponent('Test from Outlook');
+                const body = encodeURIComponent('Email body for Outlook test');
+                const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+                
+                // Try multiple methods for Outlook
+                const link = document.createElement('a');
+                link.href = mailtoUrl;
+                link.click();
+                
+                window.open(mailtoUrl, '_blank');
+                
+                log('Outlook Test', `Tried both click() and window.open() methods`, 'success');
+            } catch (error) {
+                log('Outlook Test', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            log('Info', 'Check your email client (Outlook, Gmail, etc.)', 'info');
+        }
+
+        // Initial info
+        window.addEventListener('load', function() {
+            const browserInfo = `Browser: ${navigator.userAgent.substring(0, 50)}...`;
+            log('Browser Info', browserInfo, 'info');
+            log('Status', 'Click a test button above to test mailto functionality', 'info');
+        });
+    </script>
+</body>
+</html>
