@@ -194,7 +194,7 @@ bodyStr += "\n\n";
     `mailto:${to}` +
     `?subject=${encodeURIComponent(subject)}` +
     `&body=${encodeURIComponent(bodyStr)}`;
-  window.location.href = mailtoUrl;
+  window.open(mailtoUrl, "_blank");
   onClose();
      };
 
