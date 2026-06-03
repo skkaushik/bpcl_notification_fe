@@ -107,6 +107,7 @@ const Dashboard = () => {
             displayEquipId: id,
             displayType: row[typeKey],
             displayUnitType: rawWorkCtr.startsWith("MR") ? "MR" : "MS",
+            displayUnitName: String(row[workCtrKey] || "").trim(),
             displayDate: formatExcelDate(row[dateKey]),
             displayStatus: row[statusKey] || "N/A",
             displayPriority: priorityKey ? (String(row[priorityKey] || "").trim() || "N/A") : "N/A",
@@ -123,10 +124,15 @@ const Dashboard = () => {
       if (notifications.length > 1) {
         const uniqueTypes = [...new Set(notifications.map(n => String(n.displayType)))].join(', ');
         const uniquePriorities = [...new Set(notifications.map(n => String(n.displayPriority)).filter(p => p && p !== 'N/A'))].join(', ') || 'N/A';
+        const uniqueNotificationIds = [...new Set(notifications.map(n => String(n.displayId)))].join(', ');
+        const uniqueUnitNames = [...new Set(notifications.map(n => String(n.displayUnitName)))].join(', ');
+
         groupedData.push({
           displayEquipId: id,
+          displayNotificationIds: uniqueNotificationIds,
           displayType: uniqueTypes,
           displayUnitType: notifications[0].displayUnitType,
+          displayUnitName: uniqueUnitNames || 'N/A',
           displayPriority: uniquePriorities,
           notificationCount: notifications.length,
           notifications: notifications,
@@ -143,7 +149,8 @@ const Dashboard = () => {
       return (
         String(row.displayEquipId).toLowerCase().includes(lowerQuery) ||
         String(row.displayType).toLowerCase().includes(lowerQuery) ||
-        String(row.displayUnitType).toLowerCase().includes(lowerQuery)
+        String(row.displayUnitName).toLowerCase().includes(lowerQuery) ||
+        String(row.displayNotificationIds).toLowerCase().includes(lowerQuery)
       );
     });
   }, [criticalEquipmentData, searchQuery]);
