@@ -140,4 +140,4 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
   );
 };
 
-export default UnitWiseBarChart;
+export default React.memo(UnitWiseBarChart);

@@ -477,14 +477,14 @@ const Dashboard = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowUploadDialog(true)}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
+                  className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
                 >
                   <BsUpload className="text-purple-600 text-base" />
                   Upload New File
                 </button>
                 <button
                   onClick={() => setShowGlobalEmailModal(true)}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
+                  className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
                 >
                   <BsEnvelope className="text-white text-base" />
                   Send Emails

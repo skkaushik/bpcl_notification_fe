@@ -80,6 +80,7 @@ const CriticalEquipmentTable = ({
           columns={criticalEquipmentColumns}
           data={filteredCriticalEquipmentData}
           onRowClicked={(row) => setSelectedEquipment(prev => prev && prev.displayEquipId === row.displayEquipId ? null : row)}
+          pointerOnHover
           pagination
           paginationPerPage={10}
           paginationRowsPerPageOptions={[10, 20, 30, 50]}
