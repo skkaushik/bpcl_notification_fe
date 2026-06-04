@@ -52,4 +52,4 @@ const TotalDueNotificationsChart = ({ data }) => {
   );
 };
 
-export default TotalDueNotificationsChart;
+export default React.memo(TotalDueNotificationsChart);

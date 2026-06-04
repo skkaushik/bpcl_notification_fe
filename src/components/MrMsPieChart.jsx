@@ -100,4 +100,4 @@ const MrMsPieChart = ({ data = [] }) => {
   );
 };
 
-export default MrMsPieChart;
+export default React.memo(MrMsPieChart);

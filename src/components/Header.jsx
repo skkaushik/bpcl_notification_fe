@@ -65,7 +65,7 @@ const Header = ({ hasData = false, activeView, setActiveView }) => {
             <div className="relative" ref={aiMenuRef}>
               <button
                 onClick={() => setShowAIProviderMenu(!showAIProviderMenu)}
-                className="relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
+                className="cursor-pointer relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
               >
                 <div className="flex items-center gap-2 px-5 py-1.5 bg-white rounded-full h-full w-full">
                   <BsStars size={18} className="text-orange-500" />
