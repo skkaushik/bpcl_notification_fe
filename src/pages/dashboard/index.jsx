@@ -537,6 +537,9 @@ const Dashboard = () => {
       return;
     }
 
+    const selectedAge = Number(ageFilter) > 0 ? Number(ageFilter) : 1;
+    const ageLabel = selectedAge === 1 ? 'day' : 'days';
+
     const emailsToOpen = [];
     
     Object.entries(emailGroups).forEach(([email, notifs]) => {
@@ -546,10 +549,10 @@ const Dashboard = () => {
         plantName = rawUnit.substring(2).trim();
       }
       
-      const subject = `Pending Notifications - ${plantName} (More Than 1 Days)`;
+      const subject = `Pending Notifications - ${plantName} (Last ${selectedAge} ${ageLabel})`;
 
       let bodyStr = `Dear Sir,\n\n`;
-      bodyStr += `Please find Below the notifications pending for more than 1 days:\n\n`;
+      bodyStr += `Please find Below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
       bodyStr += `Plant name\tNotification no\tNotification Date\tNotification Type\tDescription\tDays Pending\tUser status\tSystem status\n`;
 
       notifs.forEach((n) => {
