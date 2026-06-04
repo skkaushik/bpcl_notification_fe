@@ -12,6 +12,8 @@ import EmptyDashboardState from "../../components/EmptyDashboardState";
 import CriticalEquipmentTable from "../../components/CriticalEquipmentTable";
 import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import { useState, useRef, useEffect, useMemo } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { BsUpload, BsEnvelope } from "react-icons/bs";
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
@@ -34,7 +36,29 @@ const Dashboard = () => {
   const [selectedNotification, setSelectedNotification] = useState(null);
 
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
+  const [activeUnitFilter, setActiveUnitFilter] = useState([]);
+  const [activeDeptFilter, setActiveDeptFilter] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState([null, null]);
+  const datePickerRef = useRef(null);
+  const [startDateFilter, endDateFilter] = dateRange;
+  const [ageFilter, setAgeFilter] = useState(0);
+
+  const availableUnits = useMemo(() => {
+    if (!rawData.length) return [];
+    const sample = rawData[0];
+    const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
+    if (!workCtrKey) return [];
+
+    const units = new Set();
+    rawData.forEach(row => {
+      const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
+      if (rawUnit.startsWith("MR") || rawUnit.startsWith("MS")) {
+        units.add(rawUnit.substring(2).trim());
+      }
+    });
+    return Array.from(units).sort();
+  }, [rawData]);
 
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -47,27 +71,98 @@ const Dashboard = () => {
   }, [rawData]);
 
   const filteredRawData = useMemo(() => {
+    let result = rawData;
 
-    if (
-      activeTypeFilter.length === 0 ||
-      !typeKeyInData
-    ) {
-      return rawData;
+    if (activeTypeFilter.length > 0 && typeKeyInData) {
+      const selectedValues = activeTypeFilter.map((item) => item.value);
+      result = result.filter((row) =>
+        selectedValues.includes(
+          String(row[typeKeyInData] ?? '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, '')
+        )
+      );
     }
 
-    const selectedValues =
-      activeTypeFilter.map((item) => item.value);
+    if (activeUnitFilter.length > 0) {
+      const sample = rawData[0] || {};
+      const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
+      if (workCtrKey) {
+        result = result.filter((row) => {
+          const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
+          let plantName = rawUnit;
+          if (rawUnit.startsWith("MR") || rawUnit.startsWith("MS")) {
+            plantName = rawUnit.substring(2).trim();
+          }
+          return activeUnitFilter.includes(plantName);
+        });
+      }
+    }
 
-    return rawData.filter((row) =>
-      selectedValues.includes(
-        String(row[typeKeyInData] ?? '')
-          .trim()
-          .toUpperCase()
-          .replace(/\s+/g, '')
-      )
-    );
+    if (activeDeptFilter.length > 0 && activeDeptFilter.length < 2) {
+      const sample = rawData[0] || {};
+      const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
+      if (workCtrKey) {
+        result = result.filter((row) => {
+          const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
+          const prefix = rawUnit.substring(0, 2);
+          return activeDeptFilter.includes(prefix);
+        });
+      }
+    }
 
-  }, [rawData, activeTypeFilter, typeKeyInData]);
+    if (startDateFilter || endDateFilter || Number(ageFilter) > 0) {
+      const sample = rawData[0] || {};
+      const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
+
+      if (notifDateKey) {
+        result = result.filter((row) => {
+          let passDate = true;
+          let passAge = true;
+
+          let val = row[notifDateKey];
+          let d = null;
+          if (val) {
+            if (val instanceof Date) d = val;
+            else if (typeof val === 'number') d = new Date((val - 25569) * 86400 * 1000);
+            else d = new Date(String(val).trim());
+          }
+
+          const notifDate = d && !isNaN(d) ? d : null;
+
+          if (notifDate) {
+            if (startDateFilter) {
+              const start = new Date(startDateFilter);
+              start.setHours(0, 0, 0, 0);
+              passDate = passDate && notifDate >= start;
+            }
+            if (endDateFilter) {
+              const end = new Date(endDateFilter);
+              end.setHours(23, 59, 59, 999);
+              passDate = passDate && notifDate <= end;
+            }
+            if (Number(ageFilter) > 0) {
+              const thresholdDate = new Date();
+              thresholdDate.setDate(thresholdDate.getDate() - Number(ageFilter));
+              thresholdDate.setHours(0, 0, 0, 0);
+              passAge = passAge && notifDate >= thresholdDate;
+            }
+          } else {
+            passDate = false;
+            passAge = false;
+          }
+
+          if (!startDateFilter && !endDateFilter) passDate = true;
+          if (!ageFilter || Number(ageFilter) <= 0) passAge = true;
+
+          return passDate && passAge;
+        });
+      }
+    }
+
+    return result;
+  }, [rawData, activeTypeFilter, typeKeyInData, activeUnitFilter, activeDeptFilter, startDateFilter, endDateFilter, ageFilter]);
 
 
 
@@ -75,9 +170,9 @@ const Dashboard = () => {
     return buildDueChartData(filteredRawData);
   }, [filteredRawData]);
   const criticalEquipmentData = useMemo(() => {
-    if (!rawData.length) return [];
+    if (!filteredRawData.length) return [];
 
-    const sample = rawData[0];
+    const sample = filteredRawData[0];
     const equipmentKey = findKey(sample, ["Equipment", "Equipment ID", "Equip"]);
     const typeKey = findKey(sample, ["Notifictn type", "Notification Type", "Type"]);
     const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr"]);
@@ -93,7 +188,7 @@ const Dashboard = () => {
 
     const equipmentCounts = {};
     const equipmentMap = {};
-    rawData.forEach((row) => {
+    filteredRawData.forEach((row) => {
       const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
       if (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) {
         const id = String(row[equipmentKey] || "").trim();
@@ -141,7 +236,7 @@ const Dashboard = () => {
     });
 
     return groupedData;
-  }, [rawData]);
+  }, [filteredRawData]);
   const filteredCriticalEquipmentData = useMemo(() => {
     if (!searchQuery) return criticalEquipmentData;
     const lowerQuery = searchQuery.toLowerCase();
@@ -168,9 +263,9 @@ const Dashboard = () => {
   const prevRawSignature = useRef('');
   useEffect(() => {
 
-    const signature = rawData.length + '|' + (rawData[0] ? Object.keys(rawData[0]).join(',') : '');
+    const signature = filteredRawData.length + '|' + (filteredRawData[0] ? Object.keys(filteredRawData[0]).join(',') : '');
     if (prevRawSignature.current !== signature) {
-      const newStats = calculateKpiStats(rawData);
+      const newStats = calculateKpiStats(filteredRawData);
       setStats((prev) => {
         const p = JSON.stringify(prev);
         const n = JSON.stringify(newStats);
@@ -178,7 +273,7 @@ const Dashboard = () => {
       });
       prevRawSignature.current = signature;
     }
-  }, [rawData]);
+  }, [filteredRawData]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('data-loaded', { detail: rawData }));
@@ -198,16 +293,16 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-  const savedNotifications = localStorage.getItem("notifications");
-  const savedRawData = localStorage.getItem("rawData");
+    const savedNotifications = localStorage.getItem("notifications");
+    const savedRawData = localStorage.getItem("rawData");
 
-  if (savedNotifications && savedRawData) {
-    setNotifications(JSON.parse(savedNotifications));
-    setRawData(JSON.parse(savedRawData));
-  }
-}, []);
+    if (savedNotifications && savedRawData) {
+      setNotifications(JSON.parse(savedNotifications));
+      setRawData(JSON.parse(savedRawData));
+    }
+  }, []);
 
-  const handleSendEmail = async(notification) => {
+  const handleSendEmail = async (notification) => {
     if (!notification) return;
     const type = String(notification.type ?? '').trim().toUpperCase();
     const rawUnit = String(notification.workCtr ?? '').trim().toUpperCase();
@@ -239,25 +334,25 @@ const Dashboard = () => {
         targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
       }
     }
- if (targetEmail) {
-    const subject = encodeURIComponent(
-      `Notification Alert: ${notification.id} - ${notification.equip}`
-    );
+    if (targetEmail) {
+      const subject = encodeURIComponent(
+        `Notification Alert: ${notification.id} - ${notification.equip}`
+      );
 
-    const body = encodeURIComponent(
-      `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
-    );
+      const body = encodeURIComponent(
+        `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
+      );
 
-    window.open(
-      `mailto:${targetEmail}?subject=${subject}&body=${body}`,
-      '_blank'
-    );
-  } else {
-    alert(
-      `No email configuration found for plant: ${plantName} with prefix ${prefix}`
-    );
-  }
-};
+      window.open(
+        `mailto:${targetEmail}?subject=${subject}&body=${body}`,
+        '_blank'
+      );
+    } else {
+      alert(
+        `No email configuration found for plant: ${plantName} with prefix ${prefix}`
+      );
+    }
+  };
 
   const processUploadedFile = async () => {
     if (!selectedFile) return;
@@ -401,15 +496,85 @@ const Dashboard = () => {
         {rawData.length > 0 ? (
           <>
 
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-8">
 
-              <div className="flex flex-wrap gap-3 items-center">
-                <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Notification Type:</span>
-                <button
-                  onClick={() => {
-                    setActiveTypeFilter([]);
-                  }}
-                  className={`cursor-pointer
+              <div className="flex flex-col gap-4">
+
+                <div className="flex flex-wrap gap-3 items-center">
+                  <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Unit Filter:</span>
+                  <button
+                    onClick={() => setActiveUnitFilter([])}
+                    className={`cursor-pointer
+                      px-3
+                      py-2
+                      rounded-xl
+                      text-sm
+                      font-semibold
+                      transition-all
+                      duration-300
+                      border-2
+                      shadow-sm
+                      hover:-translate-y-0.5
+                      hover:shadow-md
+                      ${(activeUnitFilter.length === 0 || activeUnitFilter.length === availableUnits.length)
+                        ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                      }`}
+                  >
+                    All
+                  </button>
+                  {availableUnits.map((unit) => {
+                    const isSelected = activeUnitFilter.includes(unit);
+                    return (
+                      <button
+                        key={unit}
+                        onClick={() => {
+                          if (activeUnitFilter.length === 0 || activeUnitFilter.length === availableUnits.length) {
+                            setActiveUnitFilter([unit]);
+                          } else if (activeUnitFilter.includes(unit)) {
+                            setActiveUnitFilter(activeUnitFilter.filter((u) => u !== unit));
+                          } else {
+                            setActiveUnitFilter([...activeUnitFilter, unit]);
+                          }
+                        }}
+                        className={`cursor-pointer
+                          px-2
+                          py-2
+                          rounded-xl
+                          text-sm
+                          font-semibold
+                          transition-all
+                          duration-300
+                          border-2
+                          shadow-sm
+                          hover:-translate-y-0.5
+                          hover:shadow-md
+                          ${isSelected
+                            ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                          }`}
+                      >
+                        {unit}
+                      </button>
+                    );
+                  })}
+                  {activeUnitFilter.length > 0 && activeUnitFilter.length !== availableUnits.length && (
+                    <button
+                      onClick={() => setActiveUnitFilter([])}
+                      className="cursor-pointer px-1 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 ml-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3 items-center">
+                  <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Notification Type:</span>
+                  <button
+                    onClick={() => {
+                      setActiveTypeFilter([]);
+                    }}
+                    className={`cursor-pointer
                     px-3
                     py-2
                     rounded-xl
@@ -422,27 +587,27 @@ const Dashboard = () => {
                     hover:-translate-y-0.5
                     hover:shadow-md
                     ${(activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length)
-                      ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
-                      : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
-                    }`}
-                >
-                  All
-                </button>
-                {ALL_TYPES.map((type) => {
-                  const isSelected = activeTypeFilter.some((item) => item.value === type);
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
-                          setActiveTypeFilter([{ value: type, label: type }]);
-                        } else if (activeTypeFilter.some((item) => item.value === type)) {
-                          setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
-                        } else {
-                          setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
-                        }
-                      }}
-                      className={`cursor-pointer
+                        ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                      }`}
+                  >
+                    All
+                  </button>
+                  {ALL_TYPES.map((type) => {
+                    const isSelected = activeTypeFilter.some((item) => item.value === type);
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
+                            setActiveTypeFilter([{ value: type, label: type }]);
+                          } else if (activeTypeFilter.some((item) => item.value === type)) {
+                            setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
+                          } else {
+                            setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
+                          }
+                        }}
+                        className={`cursor-pointer
                         px-3
                         py-2
                         rounded-xl
@@ -455,40 +620,151 @@ const Dashboard = () => {
                         hover:-translate-y-0.5
                         hover:shadow-md
                         ${isSelected
-                          ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
-                          : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
-                        }`}
+                            ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                          }`}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                  {activeTypeFilter.length > 0 && activeTypeFilter.length !== ALL_TYPES.length && (
+                    <button
+                      onClick={() => setActiveTypeFilter([])}
+                      className="cursor-pointer px-2 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 ml-1"
                     >
-                      {type}
+                      Clear
                     </button>
-                  );
-                })}
-                {activeTypeFilter.length > 0 && activeTypeFilter.length !== ALL_TYPES.length && (
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3 items-center">
+                  <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2"> Department Type:</span>
                   <button
-                    onClick={() => setActiveTypeFilter([])}
-                    className="cursor-pointer px-2 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 ml-1"
+                    onClick={() => setActiveDeptFilter([])}
+                    className={`cursor-pointer px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border-2 shadow-sm hover:-translate-y-0.5 hover:shadow-md
+                      ${(activeDeptFilter.length === 0 || activeDeptFilter.length === 2)
+                        ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                      }`}
                   >
-                    Clear
+                    All
                   </button>
-                )}
+                  {["MR", "MS"].map((dept) => {
+                    const isSelected = activeDeptFilter.includes(dept);
+                    return (
+                      <button
+                        key={dept}
+                        onClick={() => {
+                          if (activeDeptFilter.length === 0 || activeDeptFilter.length === 2) {
+                            setActiveDeptFilter([dept]);
+                          } else if (activeDeptFilter.includes(dept)) {
+                            setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
+                          } else {
+                            setActiveDeptFilter([...activeDeptFilter, dept]);
+                          }
+                        }}
+                        className={`cursor-pointer px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border-2 shadow-sm hover:-translate-y-0.5 hover:shadow-md
+                          ${isSelected
+                            ? "bg-[#4F46E5] text-white border-[#4F46E5] shadow-sm"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                          }`}
+                      >
+                        {dept === 'MR' ? 'Rotary (MR)' : 'Static (MS)'}
+                      </button>
+                    );
+                  })}
+                  {activeDeptFilter.length > 0 && activeDeptFilter.length < 2 && (
+                    <button
+                      onClick={() => setActiveDeptFilter([])}
+                      className="cursor-pointer px-2 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 ml-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowUploadDialog(true)}
-                  className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
-                >
-                  <BsUpload className="text-purple-600 text-base" />
-                  Upload New File
-                </button>
-                <button
-                  onClick={() => setShowGlobalEmailModal(true)}
-                  className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
-                >
-                  <BsEnvelope className="text-white text-base" />
-                  Send Emails
-                </button>
+              <div className="flex flex-col gap-6 shrink-0 xl:w-[450px]">
+                <div className="flex items-center gap-3 xl:justify-end">
+                  <button
+                    onClick={() => setShowUploadDialog(true)}
+                    className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-white px-4 h-[42px] text-sm font-semibold text-purple-700 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm"
+                  >
+                    <BsUpload className="text-purple-600 text-base" />
+                    Upload New File
+                  </button>
+                  <button
+                    onClick={() => setShowGlobalEmailModal(true)}
+                    className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
+                  >
+                    <BsEnvelope className="text-white text-base" />
+                    Send Emails
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold uppercase tracking-wide text-slate-800 min-w-[140px]">
+                      Date Range:
+                    </span>
+                    <div className="relative flex-1">
+                      <DatePicker
+                        ref={datePickerRef}
+                        selectsRange
+                        startDate={startDateFilter}
+                        endDate={endDateFilter}
+                        onChange={(update) => {
+                          setDateRange(update);
+                        }}
+                        maxDate={new Date()}
+                        dateFormat="dd-MM-yyyy"
+                        placeholderText="dd-mm-yyyy - dd-mm-yyyy"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        className="w-full rounded-2xl border border-slate-200 bg-white py-2 pl-3 pr-20 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        isClearable
+                        wrapperClassName="w-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          datePickerRef.current?.setOpen(true);
+                        }}
+                        className="absolute inset-y-0 right-10 flex items-center text-slate-400 transition hover:text-indigo-600 pointer-events-none"
+                      >
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold uppercase tracking-wide text-slate-800 min-w-[140px]">
+                      Age (Last X days):
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={ageFilter}
+                      onChange={(e) => setAgeFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="flex-1 rounded-2xl border border-slate-200 bg-white py-2 px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

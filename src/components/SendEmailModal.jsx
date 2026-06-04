@@ -1,16 +1,10 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import { useState, useMemo, useEffect } from 'react';
 import NotificationTypeFilter from './NotificationTypeFilter';
 import { emailConfig } from '../data/emailConfig';
 import { Mail } from "lucide-react";
 
 const SendEmailModal = ({ isOpen, onClose, notifications }) => {
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
-  const [dateRange, setDateRange] = useState([null, null]);
-  const datePickerRef = useRef(null);
-  const [startDateFilter, endDateFilter] = dateRange;
-  const [ageFilter, setAgeFilter] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,43 +32,8 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
       );
     }
 
-    if (startDateFilter || endDateFilter || Number(ageFilter) > 0) {
-      result = result.filter(n => {
-        let passDate = true;
-        let passAge = true;
-        const notifDate = n.notifDate && n.notifDate !== 'N/A' ? new Date(n.notifDate) : null;
-
-        if (notifDate && !isNaN(notifDate)) {
-          if (startDateFilter) {
-            const start = new Date(startDateFilter);
-            start.setHours(0, 0, 0, 0);
-            passDate = passDate && notifDate >= start;
-          }
-          if (endDateFilter) {
-            const end = new Date(endDateFilter);
-            end.setHours(23, 59, 59, 999);
-            passDate = passDate && notifDate <= end;
-          }
-          if (Number(ageFilter) > 0) {
-            const thresholdDate = new Date();
-            thresholdDate.setDate(thresholdDate.getDate() - Number(ageFilter));
-            thresholdDate.setHours(0, 0, 0, 0);
-            passAge = passAge && notifDate >= thresholdDate;
-          }
-        } else {
-          passDate = false;
-          passAge = false;
-        }
-
-        if (!startDateFilter && !endDateFilter) passDate = true;
-        if (!ageFilter || Number(ageFilter) <= 0) passAge = true;
-
-        return passDate && passAge;
-      });
-    }
-
     return result;
-  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageFilter]);
+  }, [notifications, emailActiveTypeFilter]);
 
   const emailGroups = useMemo(() => {
     const groups = {};
@@ -212,76 +171,15 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">
-              Date Range
-            </label>
-            <div className="relative w-full">
-              <DatePicker
-                ref={datePickerRef}
-                selectsRange
-                startDate={startDateFilter}
-                endDate={endDateFilter}
-                onChange={(update) => {
-                  setDateRange(update);
-                }}
-                maxDate={new Date()}
-                dateFormat="dd-MM-yyyy"
-                placeholderText="dd-mm-yyyy - dd-mm-yyyy"
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-3 pr-20 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                isClearable
-                wrapperClassName="w-full"
-                portalId="root-portal"
-                popperClassName="!z-[9999]"
-              />
-
-              <button
-                type="button"
-                onClick={() => {
-                  datePickerRef.current?.setOpen(true);
-                }}
-                className="absolute inset-y-0 right-9 flex items-center pr-4 text-slate-400 transition hover:text-indigo-600"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-bold text-slate-700">
-                Age (Last X days)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={ageFilter}
-                onChange={(e) => setAgeFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col justify-start">
-            <div className="flex flex-wrap gap-3 items-center">
-              <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2">
-                Notification Type:
-              </span>
-              <NotificationTypeFilter
-                value={emailActiveTypeFilter}
-                onChange={setEmailActiveTypeFilter}
-              />
-            </div>
+        <div className="flex flex-col justify-start">
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2">
+              Notification Type:
+            </span>
+            <NotificationTypeFilter
+              value={emailActiveTypeFilter}
+              onChange={setEmailActiveTypeFilter}
+            />
           </div>
         </div>
 
