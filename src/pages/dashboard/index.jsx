@@ -1,7 +1,6 @@
 import Layout from "../../components/Layout";
 import NotificationTypeBarChart from "../../components/NotificationTypeBarChart";
 import UnitWiseBarChart from "../../components/UnitWiseBarChart";
-import SendEmailModal from "../../components/SendEmailModal";
 import MrMsPieChart from "../../components/MrMsPieChart";
 import TotalDueNotificationsChart from "../../components/TotalDueNotificationsChart";
 import UploadDataDialog from "../../components/UploadDataDialog";
@@ -27,7 +26,6 @@ import {
 
 const Dashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [showGlobalEmailModal, setShowGlobalEmailModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [rawData, setRawData] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -488,6 +486,115 @@ const Dashboard = () => {
       }, 3000);
     }
   };
+
+  const handleSendGroupEmail = () => {
+    const sample = rawData[0] || {};
+    const idKey = findKey(sample, ["Notification", "Notification No", "Notifictn"]);
+    
+    const validIds = new Set(filteredRawData.map(row => String(row[idKey]).trim()));
+
+    const emailFilteredNotifications = notifications.filter(n => {
+      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
+      const isMRMS = rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
+      return isMRMS && validIds.has(n.id);
+    });
+
+    if (emailFilteredNotifications.length === 0) {
+      alert("There are 0 matching notifications. Please upload an Excel file first or adjust filters.");
+      return;
+    }
+
+    const emailGroups = {};
+    emailFilteredNotifications.forEach(notif => {
+      const type = String(notif.type ?? '').trim().toUpperCase();
+      const rawUnit = String(notif.workCtr ?? '').trim().toUpperCase();
+      const status = String(notif.status ?? '').trim().toUpperCase();
+      let prefix = ''; let plantName = rawUnit;
+      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
+        prefix = rawUnit.substring(0, 2);
+        plantName = rawUnit.substring(2).trim();
+      }
+      const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
+      if (plantConfig) {
+        const isProcessType = ['M1', 'M2', 'M6'].includes(type);
+        const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO') || status.includes('JBPR');
+        let targetEmail = '';
+        if (isProcessType && isProcessStatus) targetEmail = plantConfig.processEmail;
+        else if (prefix === 'MR') targetEmail = plantConfig.rotaryMail;
+        else if (prefix === 'MS') targetEmail = plantConfig.staticMail;
+        else targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
+
+        if (targetEmail) {
+          if (!emailGroups[targetEmail]) emailGroups[targetEmail] = [];
+          emailGroups[targetEmail].push(notif);
+        }
+      }
+    });
+
+    const targetEmails = Object.keys(emailGroups);
+    if (targetEmails.length === 0) {
+      alert("No matching emails found for current data.");
+      return;
+    }
+
+    const emailsToOpen = [];
+    
+    Object.entries(emailGroups).forEach(([email, notifs]) => {
+      let rawUnit = String(notifs[0]?.workCtr ?? '').trim().toUpperCase();
+      let plantName = rawUnit;
+      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
+        plantName = rawUnit.substring(2).trim();
+      }
+      
+      const subject = `Pending Notifications - ${plantName} (More Than 1 Days)`;
+
+      let bodyStr = `Dear Sir,\n\n`;
+      bodyStr += `Please find Below the notifications pending for more than 1 days:\n\n`;
+      bodyStr += `Plant name\tNotification no\tNotification Date\tNotification Type\tDescription\tDays Pending\tUser status\tSystem status\n`;
+
+      notifs.forEach((n) => {
+        let daysPending = '0';
+        if (n.notifDate && n.notifDate !== 'N/A') {
+          const notifD = new Date(n.notifDate);
+          if (!isNaN(notifD)) {
+            const diffTime = Math.abs(new Date() - notifD);
+            daysPending = Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
+          }
+        }
+        
+        let desc = (n.description || '').replace(/\r?\n|\r/g, " ").substring(0, 60);
+        let dateStr = n.notifDate !== 'N/A' ? n.notifDate : '';
+        
+        bodyStr += `${n.workCtr}\t${n.id}\t${dateStr}\t${n.type}\t${desc}\t${daysPending}\t${n.status}\t${n.sysStatus}\n`;
+      });
+
+      bodyStr += `\nKindly take necessary action.\n\n`;
+      bodyStr += `Regards,\nMechanical Maintenance Team`;
+
+      const encodedSubject = encodeURIComponent(subject);
+      const encodedBody = encodeURIComponent(bodyStr);
+      
+      const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`;
+      
+      emailsToOpen.push({
+        url: mailtoUrl,
+        recipient: email
+      });
+    });
+
+    let delayTime = 0;
+    emailsToOpen.forEach((emailObj) => {
+      setTimeout(() => {
+        try {
+          window.open(emailObj.url, '_blank');
+        } catch (error) {
+          console.error(`Error opening mailto for ${emailObj.recipient}:`, error);
+        }
+      }, delayTime);
+      delayTime += 800;
+    });
+  };
+
   return (
     <Layout hasData={rawData.length > 0}>
 
@@ -696,7 +803,7 @@ const Dashboard = () => {
                     Upload New File
                   </button>
                   <button
-                    onClick={() => setShowGlobalEmailModal(true)}
+                    onClick={handleSendGroupEmail}
                     className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-[#4F46E5] px-4 h-[42px] text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-all"
                   >
                     <BsEnvelope className="text-white text-base" />
@@ -818,12 +925,6 @@ const Dashboard = () => {
           processUploadedFile={processUploadedFile}
         />
       </div>
-
-      <SendEmailModal
-        isOpen={showGlobalEmailModal}
-        onClose={() => setShowGlobalEmailModal(false)}
-        notifications={notifications}
-      />
 
     </Layout>
   );
