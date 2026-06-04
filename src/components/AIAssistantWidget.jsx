@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
-import { 
-  MdClose, MdArrowUpward, MdOutlineLightbulb, 
+import {
+  MdClose, MdArrowUpward, MdOutlineLightbulb,
   MdOutlineSettings, MdPeopleOutline, MdCheck
 } from 'react-icons/md';
 import { FiLayout, FiSidebar, FiMaximize, FiCopy } from 'react-icons/fi';
@@ -16,18 +16,18 @@ const CHART_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#0
 
 const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider = 'gemini', apiKey = '', contextData = [] }) => {
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
-  
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const layoutMenuRef = useRef(null);
 
-  const geminiChatRef = useRef(null);      
-  const openaiHistoryRef = useRef([]);     
-  const sessionProviderRef = useRef(null); 
-  const sessionKeyRef = useRef(null);      
+  const geminiChatRef = useRef(null);
+  const openaiHistoryRef = useRef([]);
+  const sessionProviderRef = useRef(null);
+  const sessionKeyRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,7 +53,7 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
         setIsOpen(false);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, viewMode, setIsOpen]);
@@ -78,20 +78,67 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
           truncated.push(row);
           len += rowStr.length;
         }
-        dataString = JSON.stringify(truncated) + 
+        dataString = JSON.stringify(truncated) +
           `\n\n[Data truncated for OpenAI. Showing ${truncated.length} of ${contextData.length} rows. Use Google Gemini for full dataset analysis.]`;
       }
 
       const sampleRow = contextData[0] || {};
       const columns = Object.keys(sampleRow).join(', ');
 
+      const normalizeKey = (key = '') => String(key).replace(/\s+/g, '').toLowerCase();
+      const keys = Object.keys(sampleRow);
+
+      const typeKey = keys.find(k => normalizeKey(k).includes('type'));
+      const statusKey = keys.find(k => normalizeKey(k) === 'status' || normalizeKey(k).includes('userstatus'));
+      const priorityKey = keys.find(k => normalizeKey(k).includes('priority'));
+      const unitKey = keys.find(k => normalizeKey(k).includes('workctr') || normalizeKey(k) === 'unit');
+
+      const stats = {
+        totalRows: contextData.length,
+        types: {},
+        statuses: {},
+        priorities: {},
+        units: { MR: 0, MS: 0 }
+      };
+
+      contextData.forEach(row => {
+        if (typeKey) {
+          const t = String(row[typeKey] || 'N/A').trim();
+          stats.types[t] = (stats.types[t] || 0) + 1;
+        }
+        if (statusKey) {
+          const s = String(row[statusKey] || 'N/A').trim();
+          stats.statuses[s] = (stats.statuses[s] || 0) + 1;
+        }
+        if (priorityKey) {
+          const p = String(row[priorityKey] || 'N/A').trim();
+          stats.priorities[p] = (stats.priorities[p] || 0) + 1;
+        }
+        if (unitKey) {
+          const u = String(row[unitKey] || '').trim().toUpperCase();
+          if (u.startsWith('MR')) stats.units.MR++;
+          else if (u.startsWith('MS')) stats.units.MS++;
+        }
+      });
+
+      const statsText = `
+PRE-CALCULATED EXACT COUNTS:
+(IMPORTANT: Large language models cannot reliably count thousands of JSON objects. ALWAYS use these exact pre-calculated numbers when asked for counts, totals, or breakdowns of the dataset.)
+- Total Notifications: ${stats.totalRows}
+- By Notification Type: ${Object.entries(stats.types).map(([k, v]) => `${k} (${v})`).join(', ')}
+- By User Status: ${Object.entries(stats.statuses).map(([k, v]) => `${k} (${v})`).join(', ')}
+- By Priority: ${Object.entries(stats.priorities).map(([k, v]) => `${k} (${v})`).join(', ')}
+- By Equipment Category: Rotary/MR (${stats.units.MR}), Static/MS (${stats.units.MS})
+`;
+
       return `You are an expert industrial maintenance data analyst. You have access to a dataset of ${contextData.length} notification records from an SAP Plant Maintenance system.
 
 COLUMNS IN THE DATA: ${columns}
+${statsText}
 
 KEY DOMAIN KNOWLEDGE:
-- "Main WorkCtr" (Work Center) column contains unit identifiers. Values starting with "MR" = Rotary equipment, "MS" = Static equipment. The part after MR/MS is the unit name.
-- "Notifictn type" or "Type" column contains notification types: M1 (Breakdown), M2 (Preventive Maintenance), M3, M4, M5, M6, M7, M8, M9.
+- "Main WorkCtr" (Work Center) is often referred to by users as "Unit" or "Plant Name". It contains unit identifiers. Values starting with "MR" = Rotary equipment, "MS" = Static equipment. The part after MR/MS is the unit name.
+- "Notifictn type" or "Type" is often referred to by users as "Notification Type". It contains notification types: M1 (Breakdown), M2 (Preventive Maintenance), M3, M4, M5, M6, M7, M8, M9.
 - "User status" or "Status" column shows notification statuses like CRTD, NOPR, NOCO, etc.
 - "Required End" column shows the deadline. If this date is in the past, the notification is OVERDUE.
 - "Notif.date" column shows when the notification was created.
@@ -99,8 +146,7 @@ KEY DOMAIN KNOWLEDGE:
 - "Equipment" column identifies the specific equipment/machine.
 
 ANALYSIS RULES:
-- When counting or grouping (e.g., "total user status"), you must iterate through ALL rows in the JSON carefully and count the exact occurrences of each value.
-- NEVER hallucinate or guess numbers. Count them precisely from the provided JSON.
+- ALWAYS rely on the "PRE-CALCULATED EXACT COUNTS" section above for aggregate numbers. DO NOT attempt to count the JSON rows manually.
 - When grouping by unit, remove the MR/MS prefix first (e.g., "MRFCC" → unit is "FCC").
 - Unique notifications = count distinct values in the "Notification" column.
 - Only count rows where "Main WorkCtr" starts with "MR" or "MS" unless told otherwise.
@@ -123,9 +169,9 @@ ${dataString}`;
     if (!promptText.trim() || isLoading) return;
 
     if (!apiKey) {
-      setMessages(prev => [...prev, { 
-        role: 'model', 
-        text: `⚠️ API Key is missing. Please select a provider from the header and enter your key for ${provider === 'openai' ? 'OpenAI' : 'Google Gemini'}.` 
+      setMessages(prev => [...prev, {
+        role: 'model',
+        text: `⚠️ API Key is missing. Please select a provider from the header and enter your key for ${provider === 'openai' ? 'OpenAI' : 'Google Gemini'}.`
       }]);
       return;
     }
@@ -137,6 +183,11 @@ ${dataString}`;
     try {
       let responseText = '';
 
+      const isFirstMessage = messages.length === 0;
+      const enhancedPrompt = isFirstMessage
+        ? `CONTEXT REMINDER: You are an expert analyzing the SAP Plant Maintenance notifications dataset provided in your system instructions. Rely on the 'PRE-CALCULATED EXACT COUNTS' for any aggregates. Keep answers concise.\nUSER REQUEST: ${promptText}`
+        : promptText;
+
       if (provider === 'gemini') {
 
         if (!geminiChatRef.current || sessionProviderRef.current !== 'gemini' || sessionKeyRef.current !== apiKey) {
@@ -144,7 +195,7 @@ ${dataString}`;
           const sysInstruction = getSystemInstruction('gemini');
           geminiChatRef.current = ai.chats.create({
             model: 'gemini-2.5-flash',
-            config: { 
+            config: {
               systemInstruction: sysInstruction,
               temperature: 0,
             },
@@ -153,7 +204,7 @@ ${dataString}`;
           sessionKeyRef.current = apiKey;
         }
 
-        const response = await geminiChatRef.current.sendMessage({ message: promptText });
+        const response = await geminiChatRef.current.sendMessage({ message: enhancedPrompt });
         responseText = response.text;
         setMessages(prev => {
           const updated = [...prev];
@@ -170,7 +221,7 @@ ${dataString}`;
           sessionKeyRef.current = apiKey;
         }
 
-        openaiHistoryRef.current.push({ role: 'user', content: promptText });
+        openaiHistoryRef.current.push({ role: 'user', content: enhancedPrompt });
 
 
 
@@ -283,7 +334,7 @@ ${dataString}`;
   };
 
   const getContainerStyles = () => {
-    switch(viewMode) {
+    switch (viewMode) {
       case 'floating':
         return "fixed bottom-6 right-6 w-96 h-[32rem] rounded-2xl shadow-2xl z-50 overflow-hidden";
       case 'sidebar':
@@ -305,7 +356,6 @@ ${dataString}`;
 
       {isOpen && (
         <div className={`bg-white flex flex-col border border-slate-200 ${getContainerStyles()}`}>
-          
 
           <div className="relative z-20 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-100 text-slate-800 px-4 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center shrink-0 shadow-sm">
             <div className="flex items-center space-x-3">
@@ -317,45 +367,45 @@ ${dataString}`;
                 <p className="text-slate-500 text-[10px] font-medium mt-1">Your analytics copilot</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
 
               <div className="relative" ref={layoutMenuRef}>
-                <button 
+                <button
                   onClick={() => setShowLayoutMenu(!showLayoutMenu)}
                   className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
                 >
                   <FiLayout size={18} />
                 </button>
-                
+
                 {showLayoutMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 text-slate-700 font-medium">
                     <div className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Switch to</div>
-                    
+
                     <button onClick={() => { setViewMode('modal'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiLayout className={viewMode==='modal' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode==='modal' ? "text-indigo-600 font-bold" : "text-slate-600"}>Modal</span></div>
+                      <div className="flex items-center space-x-3"><FiLayout className={viewMode === 'modal' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'modal' ? "text-indigo-600 font-bold" : "text-slate-600"}>Modal</span></div>
                       {viewMode === 'modal' && <MdCheck className="text-indigo-600" />}
                     </button>
-                    
+
                     <button onClick={() => { setViewMode('floating'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><BsWindowDesktop className={viewMode==='floating' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode==='floating' ? "text-indigo-600 font-bold" : "text-slate-600"}>Floating</span></div>
+                      <div className="flex items-center space-x-3"><BsWindowDesktop className={viewMode === 'floating' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'floating' ? "text-indigo-600 font-bold" : "text-slate-600"}>Floating</span></div>
                       {viewMode === 'floating' && <MdCheck className="text-indigo-600" />}
                     </button>
-                    
+
                     <button onClick={() => { setViewMode('sidebar'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiSidebar className={viewMode==='sidebar' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode==='sidebar' ? "text-indigo-600 font-bold" : "text-slate-600"}>Sidebar</span></div>
+                      <div className="flex items-center space-x-3"><FiSidebar className={viewMode === 'sidebar' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'sidebar' ? "text-indigo-600 font-bold" : "text-slate-600"}>Sidebar</span></div>
                       {viewMode === 'sidebar' && <MdCheck className="text-indigo-600" />}
                     </button>
-                    
+
                     <button onClick={() => { setViewMode('fullscreen'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiMaximize className={viewMode==='fullscreen' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode==='fullscreen' ? "text-indigo-600 font-bold" : "text-slate-600"}>Full screen</span></div>
+                      <div className="flex items-center space-x-3"><FiMaximize className={viewMode === 'fullscreen' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'fullscreen' ? "text-indigo-600 font-bold" : "text-slate-600"}>Full screen</span></div>
                       {viewMode === 'fullscreen' && <MdCheck className="text-indigo-600" />}
                     </button>
                   </div>
                 )}
               </div>
 
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-colors"
               >
@@ -365,7 +415,7 @@ ${dataString}`;
           </div>
 
           <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative">
-            
+
 
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
@@ -374,13 +424,13 @@ ${dataString}`;
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Good Afternoon!</h2>
                 <p className="text-slate-500 mb-8 max-w-sm text-sm font-medium leading-relaxed">
-                  Ask a question or pick a suggestion below.<br/>
+                  Ask a question or pick a suggestion below.<br />
                   <span className="text-slate-400">I can help you analyze unit performance, track overdue notifications, and monitor equipment statuses.</span>
                 </p>
-                
+
                 <div className="flex flex-wrap justify-center gap-3 w-full max-w-lg">
                   {suggestions.map((sug, idx) => (
-                    <button 
+                    <button
                       key={idx}
                       onClick={() => handleSend(sug.text)}
                       className="flex items-center space-x-2 bg-white text-slate-700 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all px-4 py-2.5 rounded-2xl text-sm font-bold shadow-sm"
@@ -396,11 +446,10 @@ ${dataString}`;
               <div className="flex-1 p-6 flex flex-col space-y-6">
                 {messages.map((msg, index) => (
                   <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${
-                      msg.role === 'user' 
-                        ? 'bg-indigo-600 text-white rounded-br-sm' 
-                        : 'bg-white text-slate-800 border border-slate-200 rounded-bl-sm'
-                    }`}>
+                    <div className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${msg.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-br-sm'
+                      : 'bg-white text-slate-800 border border-slate-200 rounded-bl-sm'
+                      }`}>
                       {msg.role === 'model' && (
                         <div className="flex items-center space-x-2 mb-2 text-indigo-600">
                           <BsStars size={16} />
@@ -435,14 +484,13 @@ ${dataString}`;
                 className="flex-1 bg-transparent border-none focus:outline-none text-slate-800 font-medium text-sm py-2"
                 disabled={isLoading}
               />
-              <button 
+              <button
                 onClick={() => handleSend(input)}
                 disabled={isLoading || !input.trim()}
-                className={`ml-2 p-2 rounded-xl transition-colors flex shrink-0 ${
-                  input.trim() 
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200' 
-                    : 'text-slate-300'
-                }`}
+                className={`ml-2 p-2 rounded-xl transition-colors flex shrink-0 ${input.trim()
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
+                  : 'text-slate-300'
+                  }`}
               >
                 <MdArrowUpward size={20} />
               </button>
