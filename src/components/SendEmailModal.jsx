@@ -9,8 +9,8 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
   const [emailActiveTypeFilter, setEmailActiveTypeFilter] = useState([]);
   const [dateRange, setDateRange] = useState([null, null]);
   const datePickerRef = useRef(null);
-  const [startDateFilter, endDateFilter] =
-    dateRange;
+  const [startDateFilter, endDateFilter] = dateRange;
+  const [ageFilter, setAgeFilter] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,8 +38,7 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
       );
     }
 
-    if (startDateFilter || endDateFilter) {
-
+    if (startDateFilter || endDateFilter || Number(ageFilter) > 0) {
       result = result.filter(n => {
         let passDate = true;
         let passAge = true;
@@ -49,27 +48,33 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
           if (startDateFilter) {
             const start = new Date(startDateFilter);
             start.setHours(0, 0, 0, 0);
-            passDate =
-              passDate &&
-              notifDate >= start;
+            passDate = passDate && notifDate >= start;
           }
           if (endDateFilter) {
             const end = new Date(endDateFilter);
             end.setHours(23, 59, 59, 999);
-            passDate =
-              passDate &&
-              notifDate <= end;
+            passDate = passDate && notifDate <= end;
+          }
+          if (Number(ageFilter) > 0) {
+            const thresholdDate = new Date();
+            thresholdDate.setDate(thresholdDate.getDate() - Number(ageFilter));
+            thresholdDate.setHours(0, 0, 0, 0);
+            passAge = passAge && notifDate >= thresholdDate;
           }
         } else {
           passDate = false;
+          passAge = false;
         }
+
+        if (!startDateFilter && !endDateFilter) passDate = true;
+        if (!ageFilter || Number(ageFilter) <= 0) passAge = true;
 
         return passDate && passAge;
       });
     }
 
     return result;
-  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter]);
+  }, [notifications, emailActiveTypeFilter, startDateFilter, endDateFilter, ageFilter]);
 
   const emailGroups = useMemo(() => {
     const groups = {};
@@ -253,8 +258,21 @@ const SendEmailModal = ({ isOpen, onClose, notifications }) => {
                 </svg>
               </button>
             </div>
+            
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-bold text-slate-700">
+                Age (Last X days)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={ageFilter}
+                onChange={(e) => setAgeFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
           </div>
-          <div className="flex flex-col justify-center">
+          <div className="flex flex-col justify-start">
             <div className="flex flex-wrap gap-3 items-center">
               <span className="text-sm font-bold uppercase tracking-wide text-slate-800 mr-2">
                 Notification Type:
