@@ -55,13 +55,11 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
 
     const result = [];
     Object.keys(grouped).sort().forEach((unit) => {
-      Object.keys(grouped[unit]).sort().forEach((type) => {
-        result.push({
-          label: `${unit}-${type}`,
-          unit: unit,
-          type: type,
-          count: grouped[unit][type].size
-        });
+      const unitCount = Object.values(grouped[unit]).reduce((sum, set) => sum + set.size, 0);
+      result.push({
+        label: unit,
+        unit: unit,
+        count: unitCount,
       });
     });
 
@@ -70,15 +68,11 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
 
   const CustomTick = (props) => {
     const { x, y, payload } = props;
-    const [unit, type] = payload.value.split('-');
-    
+
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={15} dy={0} textAnchor="middle" fill="#64748B" fontSize={11} fontWeight="bold">
-          {type}
-        </text>
-        <text x={0} y={30} dy={0} textAnchor="middle" fill="#94A3B8" fontSize={10}>
-          {unit}
+          {payload.value}
         </text>
       </g>
     );
@@ -94,13 +88,12 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
           No {prefix} data available
         </div>
       ) : (
-        <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="min-w-[600px] h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
-              >
+        <div className="w-full h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
+            >
 
               <defs>
                 <linearGradient
@@ -125,8 +118,8 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} width={40} />
                 <Tooltip 
                   cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
-                  formatter={(value, name, props) => [value, `Notifications (${props.payload.type})`]}
-                  labelFormatter={(label) => label.split('-')[0]}
+                  formatter={(value) => [value, 'Notifications']}
+                  labelFormatter={(label) => label}
                 />
                 <Bar dataKey="count"  fill="url(#notificationBarGradient)" radius={[4, 4, 0, 0]} maxBarSize={30}>
                   <LabelList dataKey="count" position="top" fill="#0f172a" fontSize={11} fontWeight={700} />
@@ -134,7 +127,6 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
       )}
     </div>
   );
