@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Dashboard from './pages/dashboard';
 import AIAssistantWidget from './components/AIAssistantWidget';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
+import LoginPage from "./pages/login";
 
-function App() {
+function AppContent() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [aiViewMode, setAiViewMode] = useState('modal');
   const [aiProvider, setAiProvider] = useState('gemini');
@@ -19,7 +25,7 @@ function App() {
       }
       setIsAIOpen(true);
     };
-    
+
     const handleDataLoaded = (e) => {
       if (e.detail) setContextData(e.detail);
     };
@@ -34,23 +40,30 @@ function App() {
 
   return (
     <div className={`transition-all duration-300 ${isAIOpen && aiViewMode === 'sidebar' ? 'mr-96' : ''}`}>
-      <Dashboard />
-      <AIAssistantWidget 
-        isOpen={isAIOpen} 
-        setIsOpen={setIsAIOpen} 
-        viewMode={aiViewMode} 
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route
+          path="/dashboard" element={<Dashboard />} />
+      </Routes>
+      <AIAssistantWidget
+        isOpen={isAIOpen}
+        setIsOpen={setIsAIOpen}
+        viewMode={aiViewMode}
         setViewMode={setAiViewMode}
         provider={aiProvider}
         apiKey={aiApiKey}
         contextData={contextData}
       />
-      <ToastContainer
-  position="top-center"
-  autoClose={3000}
-/>
-
+      <ToastContainer position="top-center" autoClose={3000} />
     </div>
-    
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

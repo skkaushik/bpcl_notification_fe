@@ -1,5 +1,5 @@
-import React, { useState,  useEffect } from 'react';
 import { BsStars } from 'react-icons/bs';
+import { useNavigate } from 'react-router-dom';
 
 const Header = ({
   hasData = false,
@@ -7,6 +7,12 @@ const Header = ({
   setActiveView,
   onOpenAIChat,
 }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 flex flex-col shadow-sm">
@@ -46,13 +52,15 @@ const Header = ({
 
           <div className="hidden sm:block h-6 w-px bg-slate-200" />
           <div className="flex items-center gap-2">
-            <div className="hidden sm:block text-right leading-tight">
-              <p className="text-xs font-bold text-slate-900">Ankur Sharma</p>
-              <p className="text-[10px] font-medium text-slate-500">Site Manager</p>
-            </div>
-            <div className="h-8 w-8 rounded-lg bg-slate-200 ring-2 ring-white overflow-hidden shadow-sm flex-shrink-0">
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Logout
+            </button>
+            {/* <div className="h-8 w-8 rounded-lg bg-slate-200 ring-2 ring-white overflow-hidden shadow-sm flex-shrink-0">
               <img src="https://ui-avatars.com/api/?name=Ankur+Sharma&background=6366f1&color=fff" alt="User" />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
