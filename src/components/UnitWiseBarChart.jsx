@@ -36,7 +36,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
 
     data.forEach((row) => {
       const rawUnitStr = String(row[unitKey] ?? '').trim().toUpperCase();
-      
+
 
       if (rawUnitStr.startsWith(prefix)) {
         const unitName = rawUnitStr.substring(2);
@@ -47,7 +47,7 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
         if (unitName && typeName && notifId) {
           if (!grouped[unitName]) grouped[unitName] = {};
           if (!grouped[unitName][typeName]) grouped[unitName][typeName] = new Set();
-          
+
           grouped[unitName][typeName].add(notifId);
         }
       }
@@ -68,25 +68,73 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
     return result;
   }, [data, prefix]);
 
+
   const CustomTick = (props) => {
     const { x, y, payload } = props;
-    const [unit, type] = payload.value.split('-');
-    
+    const [, type] = payload.value.split('-');
+
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={15} dy={0} textAnchor="middle" fill="#64748B" fontSize={11} fontWeight="bold">
           {type}
         </text>
-        <text x={0} y={30} dy={0} textAnchor="middle" fill="#94A3B8" fontSize={10}>
-          {unit}
-        </text>
+      </g>
+    );
+  };
+
+  const centerTickIndices = useMemo(() => {
+    const indices = new Set();
+    let start = 0;
+
+    while (start < chartData.length) {
+      const unit = chartData[start]?.unit;
+      let end = start;
+      while (end + 1 < chartData.length && chartData[end + 1].unit === unit) {
+        end += 1;
+      }
+      const center = Math.floor((start + end) / 2);
+      indices.add(center);
+      start = end + 1;
+    }
+    return indices;
+  }, [chartData]);
+
+  const CustomUnitTick = (props) => {
+    const { x, y, payload, index, width, visibleTicksCount } = props;
+    const unit = payload.value;
+    const isCenter = centerTickIndices.has(index);
+
+    const nextItem = chartData[index + 1];
+    const showSeparator = nextItem && nextItem.unit !== unit;
+
+    let groupLength = 0;
+    for (let i = index; i >= 0 && chartData[i]?.unit === unit; i--) groupLength++;
+    for (let i = index + 1; i < chartData.length && chartData[i]?.unit === unit; i++) groupLength++;
+
+    // Calculate the distance between ticks exactly
+    // In Recharts, the actual drawing width of the axis might be width, or we can approximate it.
+    // If width or visibleTicksCount is missing, provide a fallback.
+    const axisWidth = width || 600;
+    const ticksCount = visibleTicksCount || chartData.length || 1;
+    const tickSpacing = axisWidth / ticksCount;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        {isCenter && (
+          <text x={groupLength % 2 === 0 ? tickSpacing / 2 : 0} y={15} dy={0} textAnchor="middle" fill="#1e293b" fontSize={12} fontWeight="bold">
+            {unit}
+          </text>
+        )}
+        {showSeparator && (
+          <line x1={tickSpacing / 2} y1="-25" x2={tickSpacing / 2} y2="25" stroke="#cbd5e1" strokeWidth="2" />
+        )}
       </g>
     );
   };
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
-      <div className="mb-5 flex items-center justify-between">
+    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
+      <div className="mb-3 flex items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">{title}</h3>
       </div>
       {chartData.length === 0 ? (
@@ -94,41 +142,51 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
           No {prefix} data available
         </div>
       ) : (
-        <div className="overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="min-w-[600px] h-[300px]">
+        <div className="overflow-x-auto w-full pb-2 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
+          <div className="h-[250px] min-w-[600px] xl:min-w-0 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 20, left: -20, bottom: 20 }}
+                margin={{ top: 20, right: 20, left: -20, bottom: 5 }}
               >
 
-              <defs>
-                <linearGradient
-                  id="notificationBarGradient"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#2563eb" />
-                </linearGradient>
-              </defs>
+                <defs>
+                  <linearGradient
+                    id="notificationBarGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#2563eb" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="label" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={<CustomTick />} 
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={<CustomTick />}
                   interval={0}
+                  height={25}
+                />
+                <XAxis
+                  xAxisId={1}
+                  dataKey="unit"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={<CustomUnitTick />}
+                  interval={0}
+                  height={30}
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} width={40} />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
                   formatter={(value, name, props) => [value, `Notifications (${props.payload.type})`]}
                   labelFormatter={(label) => label.split('-')[0]}
                 />
-                <Bar dataKey="count"  fill="url(#notificationBarGradient)" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <Bar dataKey="count" fill="url(#notificationBarGradient)" radius={[4, 4, 0, 0]} maxBarSize={30}>
                   <LabelList dataKey="count" position="top" fill="#0f172a" fontSize={11} fontWeight={700} />
                 </Bar>
               </BarChart>

@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { uploadFileApi } from "../services/uploadService";
 
 const UploadDataDialog = ({
   isOpen,
@@ -6,7 +7,7 @@ const UploadDataDialog = ({
   selectedFile,
   setSelectedFile,
   uploadLoading,
-  processUploadedFile
+   processUploadedFile,
 }) => {
   const fileInputRef = useRef(null);
 
@@ -17,6 +18,40 @@ const UploadDataDialog = ({
     if (!file) return;
     setSelectedFile(file);
   };
+  const handleUploadToBackend = async () => {
+  try {
+    if (!selectedFile) {
+      alert("Please select a file");
+      return;
+    }
+
+    const response = await uploadFileApi(selectedFile);
+
+    console.log("UPLOAD RESPONSE:", response);
+
+    if (response.success) {
+      const sessionId = response.data.session_id;
+
+      localStorage.setItem(
+        "session_id",
+        sessionId
+      );
+      await processUploadedFile();
+onClose();
+    }
+  }catch (error) {
+  console.error("UPLOAD ERROR:", error);
+
+  if (error.response) {
+    console.log("Status:", error.response.status);
+    console.log("Response:", error.response.data);
+  } else {
+    console.log("Message:", error.message);
+  }
+
+  alert("File upload failed");
+}
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -92,22 +127,22 @@ const UploadDataDialog = ({
 
         <div className="flex gap-3">
           <button
-            disabled={uploadLoading}
-            onClick={() => {
-              if (!selectedFile) {
-                fileInputRef.current?.click();
-              } else {
-                processUploadedFile();
-              }
-            }}
-            className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
-          >
-            {uploadLoading
-              ? "Processing File..."
-              : selectedFile
-                ? "Process File"
-                : "Select File"}
-          </button>
+  disabled={uploadLoading}
+  onClick={() => {
+    if (!selectedFile) {
+      fileInputRef.current?.click();
+    } else {
+      handleUploadToBackend();
+    }
+  }}
+  className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition-all"
+>
+  {uploadLoading
+    ? "Processing File..."
+    : selectedFile
+    ? "Process File"
+    : "Select File"}
+</button>
           <button
             onClick={onClose}
             className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"

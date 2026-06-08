@@ -1,49 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState,  useEffect } from 'react';
 import { BsStars } from 'react-icons/bs';
 
-const Header = ({ hasData = false, activeView, setActiveView }) => {
-  const [showAIProviderMenu, setShowAIProviderMenu] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [providerForKey, setProviderForKey] = useState(null);
-  const [keyInput, setKeyInput] = useState('');
+const Header = ({
+  hasData = false,
+  activeView,
+  setActiveView,
+  onOpenAIChat,
+}) => {
 
-  const aiMenuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
-        setShowAIProviderMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleProviderSelect = (provider) => {
-    setShowAIProviderMenu(false);
-
-    let key = localStorage.getItem(`ai_key_${provider}`);
-    if (!key) {
-      setProviderForKey(provider);
-      setKeyInput('');
-      setShowKeyModal(true);
-      return;
-    }
-
-    window.dispatchEvent(new CustomEvent('open-ai-widget', {
-      detail: { provider, apiKey: key }
-    }));
-  };
-
-  const handleKeySubmit = () => {
-    if (keyInput.trim()) {
-      localStorage.setItem(`ai_key_${providerForKey}`, keyInput.trim());
-      setShowKeyModal(false);
-      window.dispatchEvent(new CustomEvent('open-ai-widget', {
-        detail: { provider: providerForKey, apiKey: keyInput.trim() }
-      }));
-    }
-  };
   return (
     <header className="sticky top-0 z-30 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 flex flex-col shadow-sm">
 
@@ -62,34 +26,21 @@ const Header = ({ hasData = false, activeView, setActiveView }) => {
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {hasData && (
-            <div className="relative" ref={aiMenuRef}>
-              <button
-                onClick={() => setShowAIProviderMenu(!showAIProviderMenu)}
-                className="cursor-pointer relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
+            <div className="relative">
+             <button
+                onClick={() => {
+                  console.log("ASK AI CLICKED");
+                  onOpenAIChat?.();
+                }}
+                 className="cursor-pointer relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
+                 
               >
+                
                 <div className="flex items-center gap-2 px-5 py-1.5 bg-white rounded-full h-full w-full">
                   <BsStars size={18} className="text-orange-500" />
                   <span className="text-sm font-bold text-slate-800">Ask AI</span>
                 </div>
               </button>
-
-              {showAIProviderMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 overflow-hidden">
-                  <div className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Select Provider</div>
-                  <button
-                    onClick={() => handleProviderSelect('openai')}
-                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors"
-                  >
-                    OpenAI (GPT-4o)
-                  </button>
-                  <button
-                    onClick={() => handleProviderSelect('gemini')}
-                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-semibold text-slate-700 transition-colors"
-                  >
-                    Google Gemini
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
@@ -128,7 +79,7 @@ const Header = ({ hasData = false, activeView, setActiveView }) => {
           </button>
         </div>
       )}
-
+{/* 
       {showKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in border border-slate-200">
@@ -171,7 +122,7 @@ const Header = ({ hasData = false, activeView, setActiveView }) => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </header>
   );
 };

@@ -648,12 +648,12 @@ const Dashboard = () => {
   return (
     <Layout hasData={rawData.length > 0}>
 
-      <div className="px-8 py-6">
+      <div className="px-4 py-4">
         <ProcessingOverlay uploadLoading={uploadLoading} processingPercent={processingPercent} />
         {rawData.length > 0 ? (
           <>
 
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-slate-900 transition-colors duration-200 hover:text-[#4F46E5]">Dashboard</h1>
               </div>
@@ -911,28 +911,34 @@ const Dashboard = () => {
 
             <KpiSection stats={stats} />
 
-            <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
-              <NotificationTypeBarChart data={filteredRawData} />
-              <MrMsPieChart data={filteredRawData} />
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+              <div className="lg:col-span-1 min-w-0">
+                <MrMsPieChart title="Total Notifications Unit Type Wise" data={rawData} />
+              </div>
+              <div className="lg:col-span-2 min-w-0">
+                <NotificationTypeBarChart title="Notification Type Wise" data={filteredRawData} />
+              </div>
             </div>
 
-            <div className="mt-8 grid gap-8 grid-cols-1 lg:grid-cols-2">
+            <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
               <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
               <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
             </div>
 
             <TotalDueNotificationsChart data={dueChartData} />
 
-            <div className="mt-8 flex gap-6 items-stretch overflow-hidden">
-              <CriticalEquipmentTable
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                filteredCriticalEquipmentData={filteredCriticalEquipmentData}
-                selectedEquipment={selectedEquipment}
-                setSelectedEquipment={setSelectedEquipment}
-              />
+            <div className="mt-4 flex gap-4 items-stretch overflow-hidden">
+              <div className={`transition-all duration-300 ease-in-out ${selectedEquipment ? 'w-[40%]' : 'w-full'}`}>
+                <CriticalEquipmentTable
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  filteredCriticalEquipmentData={filteredCriticalEquipmentData}
+                  selectedEquipment={selectedEquipment}
+                  setSelectedEquipment={setSelectedEquipment}
+                />
+              </div>
 
-              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[580px]' : 'w-0'}`}>
+              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[60%]' : 'w-0'}`}>
                 <EquipmentDetailsDrawer
                   selectedEquipment={selectedEquipment}
                   setSelectedEquipment={setSelectedEquipment}

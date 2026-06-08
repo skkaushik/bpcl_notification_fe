@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
 import {
   MdClose, MdArrowUpward, MdOutlineLightbulb,
   MdOutlineSettings, MdPeopleOutline, MdCheck
 } from 'react-icons/md';
 import { FiLayout, FiSidebar, FiMaximize, FiCopy } from 'react-icons/fi';
+import { askAI } from "../services/chatService";
 import { BsStars, BsWindowDesktop } from 'react-icons/bs';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -166,96 +165,53 @@ ${dataString}`;
   };
 
   const handleSend = async (promptText = input) => {
-    if (!promptText.trim() || isLoading) return;
+    const sessionId =
+  localStorage.getItem("session_id");
 
-    if (!apiKey) {
-      setMessages(prev => [...prev, {
-        role: 'model',
-        text: `⚠️ API Key is missing. Please select a provider from the header and enter your key for ${provider === 'openai' ? 'OpenAI' : 'Google Gemini'}.`
-      }]);
-      return;
-    }
+if (!sessionId) {
+  alert("Please upload a file first.");
+  return;
+}
+  if (!promptText.trim() || isLoading) return;
 
-    setMessages(prev => [...prev, { role: 'user', text: promptText }, { role: 'model', text: '' }]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      let responseText = '';
-
-      const isFirstMessage = messages.length === 0;
-      const enhancedPrompt = isFirstMessage
-        ? `CONTEXT REMINDER: You are an expert analyzing the SAP Plant Maintenance notifications dataset provided in your system instructions. Rely on the 'PRE-CALCULATED EXACT COUNTS' for any aggregates. Keep answers concise.\nUSER REQUEST: ${promptText}`
-        : promptText;
-
-      if (provider === 'gemini') {
-
-        if (!geminiChatRef.current || sessionProviderRef.current !== 'gemini' || sessionKeyRef.current !== apiKey) {
-          const ai = new GoogleGenAI({ apiKey });
-          const sysInstruction = getSystemInstruction('gemini');
-          geminiChatRef.current = ai.chats.create({
-            model: 'gemini-2.5-flash',
-            config: {
-              systemInstruction: sysInstruction,
-              temperature: 0,
-            },
-          });
-          sessionProviderRef.current = 'gemini';
-          sessionKeyRef.current = apiKey;
-        }
-
-        const response = await geminiChatRef.current.sendMessage({ message: enhancedPrompt });
-        responseText = response.text;
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: 'model', text: responseText };
-          return updated;
-        });
-
-      } else if (provider === 'openai') {
-
-        if (openaiHistoryRef.current.length === 0 || sessionProviderRef.current !== 'openai' || sessionKeyRef.current !== apiKey) {
-          const sysInstruction = getSystemInstruction('openai');
-          openaiHistoryRef.current = [{ role: 'system', content: sysInstruction }];
-          sessionProviderRef.current = 'openai';
-          sessionKeyRef.current = apiKey;
-        }
-
-        openaiHistoryRef.current.push({ role: 'user', content: enhancedPrompt });
-
-
-
-        const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-        const stream = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: openaiHistoryRef.current,
-          stream: true,
-          temperature: 0,
-        });
-
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content || '';
-          responseText += text;
-          setMessages(prev => {
-            const updated = [...prev];
-            updated[updated.length - 1] = { role: 'model', text: responseText };
-            return updated;
-          });
-        }
-        openaiHistoryRef.current.push({ role: 'assistant', content: responseText });
-      }
-
-    } catch (error) {
-      console.error("AI Error:", error);
-      setMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: 'model', text: `❌ Error: ${error.message}` };
-        return updated;
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const userMessage = {
+    role: "user",
+    text: promptText,
   };
+
+  setMessages((prev) => [...prev, userMessage]);
+
+  setInput("");
+  setIsLoading(true);
+
+  try {
+    const response = await askAI({
+      sessionId,
+      message: promptText,
+    });
+
+    const aiMessage = {
+      role: "model",
+      text:
+        response?.data?.message ||
+        "No response received from AI.",
+    };
+
+    setMessages((prev) => [...prev, aiMessage]);
+  } catch (error) {
+    console.error("CHAT API ERROR:", error);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "model",
+        text: "Failed to get response from server.",
+      },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
