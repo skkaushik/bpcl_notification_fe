@@ -1,8 +1,12 @@
 import axios from "axios";
 
-export const askAI = async ({ sessionId, message }) => {
+export const askAI = async ({
+  sessionId,
+  message,
+}) => {
+
   const response = await axios.post(
-    "https://sublet-rely-motive.ngrok-free.dev/api/chat",
+    `${import.meta.env.VITE_API_BASE_URL}/chat`,
     {
       session_id: sessionId,
       message,

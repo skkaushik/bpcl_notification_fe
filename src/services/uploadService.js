@@ -6,7 +6,7 @@ export const uploadFileApi = async (file) => {
   formData.append("file", file);
 
   const response = await axios.post(
-    "https://sublet-rely-motive.ngrok-free.dev/api/upload",
+    `${import.meta.env.VITE_API_BASE_URL}/upload`,
     formData,
     {
       headers: {
