@@ -55,10 +55,10 @@ const CriticalEquipmentTable = ({
   ];
 
   return (
-    <div className="flex-1 min-w-0 w-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
+    <div className="flex-1 min-w-0 w-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold text-slate-900">
+          <h3 className="text-lg font-bold text-slate-900">
             Critical Equipment Details
           </h3>
           <p className="text-sm text-slate-500 mt-1">

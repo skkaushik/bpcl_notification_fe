@@ -140,9 +140,9 @@ const NotificationTypeBarChart = ({ data = [] }) => {
   }, [data]);
 
   return (
-    <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
+    <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
 
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-900">
             Number of Notifications vs Notification Type
@@ -155,7 +155,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
       </div>
 
       <div className="w-full">
-        <div className="h-[300px] sm:h-[360px]">
+        <div className="h-[250px] sm:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}

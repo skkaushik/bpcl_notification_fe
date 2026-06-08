@@ -61,11 +61,11 @@ const MrMsPieChart = ({ data = [] }) => {
   }, [chartData]);
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden flex flex-col items-center justify-center w-full h-full">
-      <div className="mb-5 flex w-full items-center justify-between">
+    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden flex flex-col items-center justify-center w-full h-full">
+      <div className="mb-2 flex w-full items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">MR vs MS Overview</h3>
       </div>
-      <div className="flex-1 w-full min-h-[300px]">
+      <div className="flex-1 w-full min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

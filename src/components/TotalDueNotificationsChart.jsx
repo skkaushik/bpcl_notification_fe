@@ -12,10 +12,10 @@ import {
 
 const TotalDueNotificationsChart = ({ data }) => {
   return (
-    <div className="mt-8 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-[24px] shadow-sm overflow-hidden">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="mt-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-slate-900">
+          <h3 className="text-lg font-bold text-slate-900">
             Total Due Notifications
           </h3>
           <p className="text-sm text-slate-500">
