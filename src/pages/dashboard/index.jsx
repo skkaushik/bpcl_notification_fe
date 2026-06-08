@@ -928,7 +928,7 @@ const Dashboard = () => {
             <TotalDueNotificationsChart data={dueChartData} />
 
             <div className="mt-4 flex gap-4 items-stretch overflow-hidden">
-              <div className={`transition-all duration-300 ease-in-out ${selectedEquipment ? 'w-[40%]' : 'w-full'}`}>
+              <div className={`transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[calc(100%-520px)]' : 'w-full'} flex-1 min-w-0`}>
                 <CriticalEquipmentTable
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
@@ -938,7 +938,7 @@ const Dashboard = () => {
                 />
               </div>
 
-              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[60%]' : 'w-0'}`}>
+              <div className={`relative shrink-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[500px]' : 'w-0'}`}>
                 <EquipmentDetailsDrawer
                   selectedEquipment={selectedEquipment}
                   setSelectedEquipment={setSelectedEquipment}
