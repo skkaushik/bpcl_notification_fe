@@ -5,8 +5,8 @@ const EquipmentDetailsDrawer = ({
 }) => {
   return (
     <div
-      className={`absolute top-0 right-0 w-[580px] h-full bg-white border-[#E5E7EB] shadow-lg flex flex-col transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${selectedEquipment
-        ? 'translate-x-0 opacity-100 border rounded-[24px]'
+      className={`absolute top-0 right-0 w-full h-full bg-white border-[#E5E7EB] shadow-lg flex flex-col transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${selectedEquipment
+        ? 'translate-x-0 opacity-100 border rounded-[16px]'
         : 'translate-x-[20px] opacity-0 border-0 rounded-none pointer-events-none'
         }`}
     >
