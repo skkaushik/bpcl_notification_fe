@@ -1,5 +1,7 @@
 import { BsStars } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
+import { LogOut } from "lucide-react";
+
 
 const Header = ({
   hasData = false,
@@ -54,9 +56,10 @@ const Header = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
-              Logout
+              <LogOut className="h-4 w-4 text-blue-600" />
+              <span>Log out</span>
             </button>
             {/* <div className="h-8 w-8 rounded-lg bg-slate-200 ring-2 ring-white overflow-hidden shadow-sm flex-shrink-0">
               <img src="https://ui-avatars.com/api/?name=Ankur+Sharma&background=6366f1&color=fff" alt="User" />

@@ -9,6 +9,7 @@ import {
   Route,
 } from "react-router-dom";
 import LoginPage from "./pages/login";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function AppContent() {
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -43,7 +44,13 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route
-          path="/dashboard" element={<Dashboard />} />
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
       <AIAssistantWidget
         isOpen={isAIOpen}
