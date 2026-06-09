@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from "react";
 import { uploadFileApi } from "../services/uploadService";
 
 const UploadDataDialog = ({
@@ -10,18 +10,56 @@ const UploadDataDialog = ({
    processUploadedFile,
 }) => {
   const fileInputRef = useRef(null);
-
+const [isUploading, setIsUploading] = useState(false);
   if (!isOpen) return null;
-
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedFile(file);
   };
-  const handleUploadToBackend = async () => {
+//   const handleUploadToBackend = async () => {
+//   try {
+//     if (!selectedFile) {
+//       alert("Please select a file");
+//       return;
+//     }
+
+//     const response = await uploadFileApi(selectedFile);
+
+//     console.log("UPLOAD RESPONSE:", response);
+
+//     if (response.success) {
+//       const sessionId = response.data.session_id;
+
+//       localStorage.setItem(
+//         "session_id",
+//         sessionId
+//       );
+//       await processUploadedFile();
+// onClose();
+//     }
+//   }catch (error) {
+//   console.error("UPLOAD ERROR:", error);
+
+//   if (error.response) {
+//     console.log("Status:", error.response.status);
+//     console.log("Response:", error.response.data);
+//   } else {
+//     console.log("Message:", error.message);
+//   }
+
+//   alert("File upload failed");
+// }
+// };
+const handleUploadToBackend = async () => {
+  if (isUploading) return;
+
   try {
+    setIsUploading(true);
+
     if (!selectedFile) {
       alert("Please select a file");
+      setIsUploading(false);
       return;
     }
 
@@ -36,23 +74,24 @@ const UploadDataDialog = ({
         "session_id",
         sessionId
       );
+
       await processUploadedFile();
-onClose();
+
+      onClose();
     }
-  }catch (error) {
-  console.error("UPLOAD ERROR:", error);
+  } catch (error) {
+    console.error("UPLOAD ERROR:", error);
 
-  if (error.response) {
-    console.log("Status:", error.response.status);
-    console.log("Response:", error.response.data);
-  } else {
-    console.log("Message:", error.message);
+    if (error.response) {
+      console.log("Status:", error.response.status);
+      console.log("Response:", error.response.data);
+    }
+
+    alert("File upload failed");
+
+    setIsUploading(false);
   }
-
-  alert("File upload failed");
-}
 };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
@@ -126,7 +165,7 @@ onClose();
         )}
 
         <div className="flex gap-3">
-          <button
+          {/* <button
   disabled={uploadLoading}
   onClick={() => {
     if (!selectedFile) {
@@ -142,6 +181,35 @@ onClose();
     : selectedFile
     ? "Process File"
     : "Select File"}
+</button> */}
+          <button
+  disabled={uploadLoading || isUploading}
+  onClick={() => {
+    if (!selectedFile) {
+      fileInputRef.current?.click();
+    } else {
+      handleUploadToBackend();
+    }
+  }}
+  className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold text-white transition-all
+    ${
+      uploadLoading || isUploading
+        ? "bg-indigo-400 cursor-not-allowed"
+        : "bg-indigo-600 hover:bg-indigo-700"
+    }`}
+>
+  {isUploading ? (
+    <div className="flex items-center justify-center gap-2">
+      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      processing...
+    </div>
+  ) : uploadLoading ? (
+    "Processing File..."
+  ) : selectedFile ? (
+    "Process File"
+  ) : (
+    "Select File"
+  )}
 </button>
           <button
             onClick={onClose}
