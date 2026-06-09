@@ -21,8 +21,14 @@ const findKey = (row = {}, targets = [], exclude = []) => {
   });
 };
 
-const COLORS = ['#f59e0b', '#3b82f6'];
-
+const COLORS = [
+  '#f59e0b', // MR
+  '#3b82f6', // MS
+  '#10b981', // MI
+  '#ef4444', // ME
+  '#8b5cf6', // FS
+  '#06b6d4', // MC
+];
 const MrMsPieChart = ({ data = [] }) => {
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -33,8 +39,14 @@ const MrMsPieChart = ({ data = [] }) => {
     if (!unitKey || !notifKey) return [];
 
     const uniqueNotifs = new Set();
-    let mrCount = 0;
-    let msCount = 0;
+   const deptCounts = {
+  MR: 0,
+  MS: 0,
+  MI: 0,
+  ME: 0,
+  FS: 0,
+  MC: 0,
+};
 
     data.forEach((row) => {
       const notifId = String(row[notifKey] ?? '').trim();
@@ -43,17 +55,20 @@ const MrMsPieChart = ({ data = [] }) => {
       uniqueNotifs.add(notifId);
       
       const rawUnitStr = String(row[unitKey] ?? '').trim().toUpperCase();
-      if (rawUnitStr.startsWith('MR')) {
-        mrCount++;
-      } else if (rawUnitStr.startsWith('MS')) {
-        msCount++;
-      }
+      const deptPrefix = rawUnitStr.substring(0, 2);
+     if (deptCounts[deptPrefix] !== undefined) {
+       deptCounts[deptPrefix]++;
+}
     });
 
     return [
-      { name: `MR (Rotary): ${mrCount}`, value: mrCount },
-      { name: `MS (Static): ${msCount}`, value: msCount }
-    ];
+  { name: `MR: ${deptCounts.MR}`, value: deptCounts.MR },
+  { name: `MS: ${deptCounts.MS}`, value: deptCounts.MS },
+  { name: `MI: ${deptCounts.MI}`, value: deptCounts.MI },
+  { name: `ME: ${deptCounts.ME}`, value: deptCounts.ME },
+  { name: `FS: ${deptCounts.FS}`, value: deptCounts.FS },
+  { name: `MC: ${deptCounts.MC}`, value: deptCounts.MC },
+].filter(item => item.value > 0);
   }, [data]);
 
   const totalNotifs = useMemo(() => {
@@ -63,7 +78,7 @@ const MrMsPieChart = ({ data = [] }) => {
   return (
     <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden flex flex-col items-center justify-center w-full h-full">
       <div className="mb-2 flex w-full items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-900">MR vs MS Overview</h3>
+        <h3 className="text-lg font-bold text-slate-900">Notifications Overview</h3>
       </div>
       <div className="flex-1 w-full min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">

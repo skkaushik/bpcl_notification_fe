@@ -25,6 +25,7 @@ import {
 } from "../../utils/dashboardHelpers";
 
 const Dashboard = () => {
+  const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"]; 
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [notifications, setNotifications] = useState(() => {
     if (typeof window === 'undefined') return [];
@@ -76,7 +77,13 @@ const Dashboard = () => {
     const units = new Set();
     rawData.forEach(row => {
       const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
-      if (rawUnit.startsWith("MR") || rawUnit.startsWith("MS")) {
+      const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
+
+if (
+  DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+  )
+) {
         units.add(rawUnit.substring(2).trim());
       }
     });
@@ -87,7 +94,9 @@ const Dashboard = () => {
     let count = 0;
     const allUnitsSelected = availableUnits.length > 0 && activeUnitFilter.length === availableUnits.length;
     const allTypesSelected = activeTypeFilter.length === ALL_TYPES.length;
-    const allDeptsSelected = activeDeptFilter.length === 2;
+    const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
+    const allDeptsSelected =
+  activeDeptFilter.length === DEPARTMENTS.length;
 
     if (activeUnitFilter.length && !allUnitsSelected) count += 1;
     if (activeTypeFilter.length && !allTypesSelected) count += 1;
@@ -129,7 +138,12 @@ const Dashboard = () => {
         result = result.filter((row) => {
           const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
           let plantName = rawUnit;
-          if (rawUnit.startsWith("MR") || rawUnit.startsWith("MS")) {
+          const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
+            if (
+              DEPARTMENTS.some(prefix =>
+                rawUnit.startsWith(prefix)
+              )
+            ) {
             plantName = rawUnit.substring(2).trim();
           }
           return activeUnitFilter.includes(plantName);
@@ -137,7 +151,10 @@ const Dashboard = () => {
       }
     }
 
-    if (activeDeptFilter.length > 0 && activeDeptFilter.length < 2) {
+    if (
+  activeDeptFilter.length > 0 &&
+  activeDeptFilter.length < DEPARTMENTS.length
+) {
       const sample = rawData[0] || {};
       const workCtrKey = findKey(sample, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
       if (workCtrKey) {
@@ -801,18 +818,23 @@ const Dashboard = () => {
                             <button
                               type="button"
                               onClick={() => setDraftActiveDeptFilter([])}
-                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${(draftActiveDeptFilter.length === 0 || draftActiveDeptFilter.length === 2) ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${(draftActiveDeptFilter.length === 0 ||
+                              draftActiveDeptFilter.length === DEPARTMENTS.length) ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                             >
                               All
                             </button>
-                            {['MR', 'MS'].map((dept) => {
+                  
+                            { DEPARTMENTS.map((dept) => {
                               const isSelected = draftActiveDeptFilter.includes(dept);
                               return (
                                 <button
                                   key={dept}
                                   type="button"
                                   onClick={() => {
-                                    if (draftActiveDeptFilter.length === 0 || draftActiveDeptFilter.length === 2) {
+                                   if (
+                                      draftActiveDeptFilter.length === 0 ||
+                                      draftActiveDeptFilter.length === DEPARTMENTS.length
+                                    ) {
                                       setDraftActiveDeptFilter([dept]);
                                     } else if (draftActiveDeptFilter.includes(dept)) {
                                       setDraftActiveDeptFilter(draftActiveDeptFilter.filter((d) => d !== dept));
@@ -822,7 +844,16 @@ const Dashboard = () => {
                                   }}
                                   className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                                 >
-                                  {dept === 'MR' ? 'Rotary (MR)' : 'Static (MS)'}
+                                 {
+                                    {
+                                      MR: "Rotary (MR)",
+                                      MS: "Static (MS)",
+                                      MI: "Instrumentation (MI)",
+                                      ME: "Electrical (ME)",
+                                      FS: "Fire & Safety (FS)",
+                                      MC: "Civil (MC)",
+                                    }[dept]
+                                  }
                                 </button>
                               );
                             })}
