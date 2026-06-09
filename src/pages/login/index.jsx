@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { MdOutlineMailLock, MdOutlineVpnKey } from "react-icons/md";
+import { loginApi } from "../../services/loginService";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,10 +10,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-
-  // Fixed company credentials
-  const COMPANY_EMAIL = "admin@company.com";
-  const COMPANY_PASSWORD = "admin123";
 
   const validateForm = () => {
     const newErrors = {};
@@ -28,50 +25,50 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+ const handleLogin = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) {
+    return;
+  }
 
+  try {
     setLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      if (email === COMPANY_EMAIL && password === COMPANY_PASSWORD) {
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            email,
-            loginTime: new Date().toISOString(),
-          })
-        );
+    const response = await loginApi(email, password);
 
-        toast.success("Login successful! Welcome back.", {
-          position: "top-center",
-          autoClose: 2000,
-        });
+    if (response.success) {
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email,
+          loginTime: new Date().toISOString(),
+          isLoggedIn: true,
+        })
+      );
 
-        setLoading(false);
-        navigate("/dashboard");
-      } else {
-        setLoading(false);
-        toast.error("Invalid email or password", {
-          position: "top-center",
-          autoClose: 2000,
-        });
-        setPassword("");
-        setErrors({ submit: "Invalid credentials" });
+      toast.success("Login successful!", {
+        position: "top-center",
+        autoClose: 2000,
+      });
+
+      navigate("/dashboard");
+    }
+  } catch (error) {
+    toast.error(
+      error?.response?.data?.detail || "Invalid email or password",
+      {
+        position: "top-center",
+        autoClose: 2000,
       }
-    }, 800);
-  };
+    );
 
-  const handleDemoFill = () => {
-    setEmail(COMPANY_EMAIL);
-    setPassword(COMPANY_PASSWORD);
-    setErrors({});
-  };
+    setPassword("");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
