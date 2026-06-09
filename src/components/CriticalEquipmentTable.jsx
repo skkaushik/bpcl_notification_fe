@@ -68,7 +68,7 @@ const CriticalEquipmentTable = ({
         <div className="w-full sm:w-72">
           <input
             type="text"
-            placeholder="Search equipment, type, unit..."
+            placeholder="Search equipment, type, department, unit..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"

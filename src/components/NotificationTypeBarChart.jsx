@@ -66,7 +66,14 @@ const defaultTypes = [
 ];
 
 const buildChartData = (data) => {
-
+const DEPARTMENTS = [
+  "MR",
+  "MS",
+  "MI",
+  "ME",
+  "FS",
+  "MC",
+];
   console.log('Chart Excel Data:', data);
 
   const notificationSets = defaultTypes.reduce((acc, type) => {
@@ -116,11 +123,12 @@ const buildChartData = (data) => {
       .toUpperCase();
 
     if (
-      !rawUnit.startsWith('MR') &&
-      !rawUnit.startsWith('MS')
-    ) {
-      return;
-    }
+  !DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+  )
+) {
+  return;
+}
 
     if (defaultTypes.includes(normalizedType) && notifId) {
       notificationSets[normalizedType].add(notifId);

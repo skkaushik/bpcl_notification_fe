@@ -13,6 +13,7 @@ export const findKey = (row = {}, targets = []) => {
 };
 
 export const formatExcelDate = (val) => {
+
   if (!val) return 'N/A';
   let d;
   if (val instanceof Date) {
@@ -28,6 +29,7 @@ export const formatExcelDate = (val) => {
 };
 
 export const calculateKpiStats = (data = []) => {
+   const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
   const sample = data[0] || {};
 
   const unitKey = findKey(sample, [
@@ -36,10 +38,14 @@ export const calculateKpiStats = (data = []) => {
     'Unit',
   ]);
   const total = data.filter((row) => {
-    const rawUnit = String(row[unitKey] ?? '').trim().toUpperCase();
-    return (rawUnit.startsWith('MR') || rawUnit.startsWith('MS'));
-  }).length;
-  
+  const rawUnit = String(row[unitKey] ?? '')
+    .trim()
+    .toUpperCase();
+
+  return DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+  );
+}).length;
   const defaults = {
     totalNotifications: '0',
     notif15Days: '0',
@@ -85,29 +91,51 @@ export const calculateKpiStats = (data = []) => {
   };
 
   const notif15Days = data.filter((row) => {
-    const rawUnit = String(row[unitKey] ?? '').trim().toUpperCase();
-    if (!rawUnit.startsWith('MR') && !rawUnit.startsWith('MS')) {
-      return false;
-    }
-    return diffDays(row[notifDateKey]) > 15;
-  }).length;
+  const rawUnit = String(row[unitKey] ?? '')
+    .trim()
+    .toUpperCase();
+
+  if (
+    !DEPARTMENTS.some(prefix =>
+      rawUnit.startsWith(prefix)
+    )
+  ) {
+    return false;
+  }
+
+  return diffDays(row[notifDateKey]) > 15;
+}).length;
 
   const m2Pending = data.filter((row) => {
     const type = String(row[typeKey] ?? '').trim().toUpperCase();
     const rawUnit = String(row[unitKey] ?? '').trim().toUpperCase();
-    const isMRorMS = rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
+    const isValidDept =
+     DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+  );
     const isM2 = type === 'M2';
     const olderThan7 = diffDays(row[notifDateKey]) > 7;
-    return (isMRorMS && isM2 && olderThan7);
+    return (
+  isValidDept &&
+  isM2 &&
+  olderThan7
+);
   }).length;
 
   const m1Pending = data.filter((row) => {
     const type = String(row[typeKey] ?? '').trim().toUpperCase();
     const rawUnit = String(row[unitKey] ?? '').trim().toUpperCase();
-    const isMRorMS = rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
+    const isValidDept =
+  DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+  );
     const isM1 = type === 'M1';
     const olderThan25 = diffDays(row[notifDateKey]) > 25;
-    return (isMRorMS && isM1 && olderThan25);
+    return (
+  isValidDept &&
+  isM1 &&
+  olderThan25
+);
   }).length;
 
   const overdue = data.filter((row) => {
@@ -133,9 +161,13 @@ export const calculateKpiStats = (data = []) => {
   data.forEach((row) => {
     const rawUnit = String(row[unitKey] ?? '').trim().toUpperCase();
     if (!rawUnit) return;
-    if (!rawUnit.startsWith('MR') && !rawUnit.startsWith('MS')) {
-      return;
-    }
+   if (
+ !DEPARTMENTS.some(prefix =>
+    rawUnit.startsWith(prefix)
+ )
+) {
+ return;
+}
     let cleanedUnit = rawUnit.substring(2).trim();
     if (!cleanedUnit) return;
     unitSet.add(cleanedUnit);
@@ -154,17 +186,34 @@ export const calculateKpiStats = (data = []) => {
 };
 
 export const buildDueChartData = (data = []) => {
+  const DEPARTMENTS = [
+    "MR",
+    "MS",
+    "MI",
+    "ME",
+    "FS",
+    "MC",
+  ];
+
   const groupedData = {};
 
   data.forEach((row) => {
-    const rawWorkCtr = String(row['Main WorkCtr'] ?? '').trim().toUpperCase();
-    if (!rawWorkCtr) return;
-    if (!rawWorkCtr.startsWith('MR') && !rawWorkCtr.startsWith('MS')) {
-      return;
-    }
+    const rawWorkCtr = String(
+      row["Main WorkCtr"] ?? ""
+    )
+      .trim()
+      .toUpperCase();
 
-    const prefix = rawWorkCtr.substring(0, 2);
+    if (!rawWorkCtr) return;
+
+    const dept = DEPARTMENTS.find((prefix) =>
+      rawWorkCtr.startsWith(prefix)
+    );
+
+    if (!dept) return;
+
     const unit = rawWorkCtr.substring(2);
+
     if (!unit) return;
 
     if (!groupedData[unit]) {
@@ -172,9 +221,14 @@ export const buildDueChartData = (data = []) => {
         unit,
         MR: 0,
         MS: 0,
+        MI: 0,
+        ME: 0,
+        FS: 0,
+        MC: 0,
       };
     }
-    groupedData[unit][prefix] += 1;
+
+    groupedData[unit][dept] += 1;
   });
 
   return Object.values(groupedData);
