@@ -224,6 +224,14 @@ if (
     return buildDueChartData(filteredRawData);
   }, [filteredRawData]);
   const criticalEquipmentData = useMemo(() => {
+    const DEPARTMENTS = [
+  "MR",
+  "MS",
+  "MI",
+  "ME",
+  "FS",
+  "MC",
+];
     if (!filteredRawData.length) return [];
 
     const sample = filteredRawData[0];
@@ -242,9 +250,16 @@ if (
 
     const equipmentCounts = {};
     const equipmentMap = {};
-    filteredRawData.forEach((row) => {
-      const rawWorkCtr = String(row[workCtrKey] || "").trim().toUpperCase();
-      if (rawWorkCtr.startsWith("MR") || rawWorkCtr.startsWith("MS")) {
+   filteredRawData.forEach((row) => {
+  const rawWorkCtr = String(row[workCtrKey] || "")
+    .trim()
+    .toUpperCase();
+
+  const isValidDept = DEPARTMENTS.some(
+    dept => rawWorkCtr.startsWith(dept)
+  );
+
+  if (isValidDept) {
         const id = String(row[equipmentKey] || "").trim();
         if (id) {
           equipmentCounts[id] = (equipmentCounts[id] || 0) + 1;
@@ -255,7 +270,10 @@ if (
             displayId: row[notificationIdKey] || "N/A",
             displayEquipId: id,
             displayType: row[typeKey],
-            displayUnitType: rawWorkCtr.startsWith("MR") ? "MR" : "MS",
+            displayUnitType:
+            DEPARTMENTS.find(dept =>
+              rawWorkCtr.startsWith(dept)
+            ) || "N/A",
             displayUnitName: String(row[workCtrKey] || "").trim(),
             displayDate: formatExcelDate(row[dateKey]),
             displayStatus: row[statusKey] || "N/A",
@@ -952,8 +970,41 @@ if (
             </div>
 
             <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
-              <UnitWiseBarChart title="Static Notification Unit Wise" prefix="MS" data={filteredRawData} />
-              <UnitWiseBarChart title="Rotary Notification Unit Wise" prefix="MR" data={filteredRawData} />
+              <UnitWiseBarChart
+    title="Static Notification Unit Wise"
+    prefix="MS"
+    data={filteredRawData}
+  />
+
+  <UnitWiseBarChart
+    title="Rotary Notification Unit Wise"
+    prefix="MR"
+    data={filteredRawData}
+  />
+
+  <UnitWiseBarChart
+    title="Instrumentation Notification Unit Wise"
+    prefix="MI"
+    data={filteredRawData}
+  />
+
+  <UnitWiseBarChart
+    title="Electrical Notification Unit Wise"
+    prefix="ME"
+    data={filteredRawData}
+  />
+
+  <UnitWiseBarChart
+    title="Fire Safety Notification Unit Wise"
+    prefix="FS"
+    data={filteredRawData}
+  />
+
+  <UnitWiseBarChart
+    title="Civils Notification Unit Wise"
+    prefix="MC"
+    data={filteredRawData}
+  />
             </div>
 
             <TotalDueNotificationsChart data={dueChartData} />

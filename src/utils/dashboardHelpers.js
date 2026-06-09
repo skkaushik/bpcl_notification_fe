@@ -186,17 +186,34 @@ export const calculateKpiStats = (data = []) => {
 };
 
 export const buildDueChartData = (data = []) => {
+  const DEPARTMENTS = [
+    "MR",
+    "MS",
+    "MI",
+    "ME",
+    "FS",
+    "MC",
+  ];
+
   const groupedData = {};
 
   data.forEach((row) => {
-    const rawWorkCtr = String(row['Main WorkCtr'] ?? '').trim().toUpperCase();
-    if (!rawWorkCtr) return;
-    if (!rawWorkCtr.startsWith('MR') && !rawWorkCtr.startsWith('MS')) {
-      return;
-    }
+    const rawWorkCtr = String(
+      row["Main WorkCtr"] ?? ""
+    )
+      .trim()
+      .toUpperCase();
 
-    const prefix = rawWorkCtr.substring(0, 2);
+    if (!rawWorkCtr) return;
+
+    const dept = DEPARTMENTS.find((prefix) =>
+      rawWorkCtr.startsWith(prefix)
+    );
+
+    if (!dept) return;
+
     const unit = rawWorkCtr.substring(2);
+
     if (!unit) return;
 
     if (!groupedData[unit]) {
@@ -204,9 +221,14 @@ export const buildDueChartData = (data = []) => {
         unit,
         MR: 0,
         MS: 0,
+        MI: 0,
+        ME: 0,
+        FS: 0,
+        MC: 0,
       };
     }
-    groupedData[unit][prefix] += 1;
+
+    groupedData[unit][dept] += 1;
   });
 
   return Object.values(groupedData);
