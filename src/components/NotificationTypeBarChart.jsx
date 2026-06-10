@@ -7,7 +7,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell,
   LabelList,
 } from 'recharts';
 
@@ -155,7 +154,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
           Notifications vs Notification Type
         </h3>
       </div>
-      
+
       {chartData.filter(d => d.value > 0).length === 0 ? (
         <div className="flex h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
           No data available
@@ -181,17 +180,17 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: "bold" }} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: "bold" }}
                   dy={10}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748B', fontSize: 12 }} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748B', fontSize: 12 }}
                   width={40}
                 />
                 <Tooltip
