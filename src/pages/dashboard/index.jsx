@@ -13,7 +13,7 @@ import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import { useState, useRef, useEffect, useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { BsUpload, BsEnvelope, BsFilter } from "react-icons/bs";
+import { BsUpload, BsEnvelope, BsFilter, BsArrowCounterclockwise } from "react-icons/bs";
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
@@ -697,7 +697,7 @@ if (
               <div className="flex flex-wrap items-center gap-3 justify-end">
                 <button
                   onClick={() => setShowUploadDialog(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-purple-200 bg-white px-5 py-3 text-sm font-semibold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-purple-200 bg-white px-5 py-3 text-sm font-semibold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
                 >
                   <BsUpload className="text-purple-600 text-base" />
                   Upload New File
@@ -715,7 +715,7 @@ if (
                       setDraftAgeFilter(ageFilter);
                       setIsFilterPopoverOpen(true);
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-white px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:border-black hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black bg-white px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:border-black hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer"
                   >
                     <BsFilter className="h-4 w-4 text-slate-800" />
                     <span>Filters</span>
@@ -750,8 +750,9 @@ if (
                             setAgeFilter(0);
                             setIsFilterPopoverOpen(false);
                           }}
-                          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
+                          className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer transition-colors"
                         >
+                          <BsArrowCounterclockwise className="h-4 w-4" />
                           Reset Defaults
                         </button>
                       </div>
@@ -765,7 +766,7 @@ if (
                             <button
                               type="button"
                               onClick={() => setDraftActiveUnitFilter([])}
-                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${draftActiveUnitFilter.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${draftActiveUnitFilter.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                             >
                               All
                             </button>
@@ -784,7 +785,7 @@ if (
                                       setDraftActiveUnitFilter([...draftActiveUnitFilter, unit]);
                                     }
                                   }}
-                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                                 >
                                   {unit}
                                 </button>
@@ -801,7 +802,7 @@ if (
                             <button
                               type="button"
                               onClick={() => setDraftActiveTypeFilter([])}
-                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${draftActiveTypeFilter.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${draftActiveTypeFilter.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                             >
                               All
                             </button>
@@ -820,7 +821,7 @@ if (
                                       setDraftActiveTypeFilter([...draftActiveTypeFilter, { value: type, label: type }]);
                                     }
                                   }}
-                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                                 >
                                   {type}
                                 </button>
@@ -837,7 +838,7 @@ if (
                             <button
                               type="button"
                               onClick={() => setDraftActiveDeptFilter([])}
-                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${(draftActiveDeptFilter.length === 0 ||
+                              className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${(draftActiveDeptFilter.length === 0 ||
                               draftActiveDeptFilter.length === DEPARTMENTS.length) ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                             >
                               All
@@ -861,7 +862,7 @@ if (
                                       setDraftActiveDeptFilter([...draftActiveDeptFilter, dept]);
                                     }
                                   }}
-                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                                  className={`px-3 py-2 rounded-2xl text-sm font-semibold border-2 transition cursor-pointer ${isSelected ? 'bg-[#4F46E5] text-white border-[#4F46E5]' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
                                 >
                                  {
                                     {
@@ -927,7 +928,7 @@ if (
                         <button
                           type="button"
                           onClick={() => setIsFilterPopoverOpen(false)}
-                          className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                          className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -941,7 +942,7 @@ if (
                             setAgeFilter(draftAgeFilter);
                             setIsFilterPopoverOpen(false);
                           }}
-                          className="rounded-2xl bg-[#4F46E5] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#3730a3]"
+                          className="rounded-2xl bg-[#4F46E5] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#3730a3] cursor-pointer"
                         >
                           Apply Filter
                         </button>
@@ -952,7 +953,7 @@ if (
 
                 <button
                   onClick={handleSendGroupEmail}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#4F46E5] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition duration-200 hover:bg-[#3730a3] hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#4F46E5] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition duration-200 hover:bg-[#3730a3] hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-200 cursor-pointer"
                 >
                   <BsEnvelope className="h-4 w-4" />
                   Send Emails

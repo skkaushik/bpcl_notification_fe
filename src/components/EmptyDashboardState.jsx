@@ -19,7 +19,7 @@ const EmptyDashboardState = ({ setShowUploadDialog }) => {
 
       <button
         onClick={() => setShowUploadDialog(true)}
-        className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+        className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all cursor-pointer"
       >
         Upload Excel File
       </button>

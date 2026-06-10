@@ -152,18 +152,18 @@ const COLORS = [
 const CustomizedContent = (props) => {
   const { x, y, width, height, index, name, value } = props;
   const labelFontSize =
-  width > 150 ? 18 :
-  width > 100 ? 15 :
-  width > 60 ? 12 :
-  width > 40 ? 10 :
-  8;
+    width > 150 ? 18 :
+      width > 100 ? 15 :
+        width > 60 ? 12 :
+          width > 40 ? 10 :
+            8;
 
-const valueFontSize =
-  width > 150 ? 18 :
-  width > 100 ? 15 :
-  width > 60 ? 12 :
-  width > 40 ? 10 :
-  8;
+  const valueFontSize =
+    width > 150 ? 18 :
+      width > 100 ? 15 :
+        width > 60 ? 12 :
+          width > 40 ? 10 :
+            8;
 
   return (
     <g>
@@ -182,28 +182,28 @@ const valueFontSize =
         className="hover:opacity-80 cursor-pointer"
       />
       <text
-  x={x + width / 2}
-  y={y + height / 2 - 8}
-  textAnchor="middle"
-  fill="#ffffff"
-  fontSize={labelFontSize}
-  fontWeight="600"
-  dominantBaseline="central"
->
-  {name}
-</text>
+        x={x + width / 2}
+        y={y + height / 2 - 8}
+        textAnchor="middle"
+        fill="#ffffff"
+        fontSize={labelFontSize}
+        fontWeight="600"
+        dominantBaseline="central"
+      >
+        {name}
+      </text>
       {value > 0 && (
         <text
-  x={x + width / 2}
-  y={y + height / 2 + 8}
-  textAnchor="middle"
-  fill="#ffffff"
-  fontSize={valueFontSize}
-  fontWeight="600"
-  dominantBaseline="central"
->
-  {value}
-</text>
+          x={x + width / 2}
+          y={y + height / 2 + 8}
+          textAnchor="middle"
+          fill="#ffffff"
+          fontSize={valueFontSize}
+          fontWeight="600"
+          dominantBaseline="central"
+        >
+          {value}
+        </text>
       )}
     </g>
   );
@@ -221,7 +221,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
       <div className="mb-2 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-gray-900">
-            Number of Notifications vs Notification Type
+            Notifications vs Notification Type
           </h3>
         </div>
       </div>
