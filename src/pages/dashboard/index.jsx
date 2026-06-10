@@ -972,7 +972,8 @@ if (
             </div>
 
             <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
-              <UnitWiseBarChart
+  <div className="lg:col-span-2">
+              {/* <UnitWiseBarChart
     title="Static Notification Unit Wise"
     prefix="MS"
     data={filteredRawData}
@@ -1006,7 +1007,13 @@ if (
     title="Civils Notification Unit Wise"
     prefix="MC"
     data={filteredRawData}
-  />
+  /> */}
+  <UnitWiseBarChart
+  title="Notification Unit Wise"
+  data={filteredRawData}
+  selectedDepartments={activeDeptFilter}
+/>
+</div>
             </div>
 
             <TotalDueNotificationsChart data={dueChartData} />

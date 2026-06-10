@@ -22,7 +22,11 @@ const findKey = (row = {}, targets = [], exclude = []) => {
   });
 };
 
-const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
+const UnitWiseBarChart = ({
+  title,
+  selectedDepartments = [],
+  data = []
+}) => {
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
@@ -35,24 +39,38 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
     const grouped = {};
 
     data.forEach((row) => {
-      const rawUnitStr = String(row[unitKey] ?? '').trim().toUpperCase();
+  const rawUnitStr = String(row[unitKey] ?? '')
+    .trim()
+    .toUpperCase();
 
+  const deptPrefix = rawUnitStr.substring(0, 2);
 
-      if (rawUnitStr.startsWith(prefix)) {
-        const unitName = rawUnitStr.substring(2);
-        const rawType = String(row[typeKey] ?? '').trim().toUpperCase();
-        const typeName = rawType.replace(/\s+/g, '');
-        const notifId = String(row[notifKey] ?? '').trim();
+  const isAllowed =
+    selectedDepartments.length === 0 ||
+    selectedDepartments.includes(deptPrefix);
 
-        if (unitName && typeName && notifId) {
-          if (!grouped[unitName]) grouped[unitName] = {};
-          if (!grouped[unitName][typeName]) grouped[unitName][typeName] = new Set();
+  if (!isAllowed) return;
 
-          grouped[unitName][typeName].add(notifId);
-        }
-      }
-    });
+  const unitName = rawUnitStr.substring(2);
 
+  const rawType = String(row[typeKey] ?? '')
+    .trim()
+    .toUpperCase();
+
+  const typeName = rawType.replace(/\s+/g, '');
+
+  const notifId = String(row[notifKey] ?? '').trim();
+
+  if (unitName && typeName && notifId) {
+    if (!grouped[unitName]) grouped[unitName] = {};
+
+    if (!grouped[unitName][typeName]) {
+      grouped[unitName][typeName] = new Set();
+    }
+
+    grouped[unitName][typeName].add(notifId);
+  }
+});
     const result = [];
     Object.keys(grouped).sort().forEach((unit) => {
       Object.keys(grouped[unit]).sort().forEach((type) => {
@@ -66,8 +84,10 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
     });
 
     return result;
-  }, [data, prefix]);
-
+  }, [data, selectedDepartments]);
+  const chartWidth = useMemo(() => {
+  return Math.max(chartData.length * 55, 1400);
+}, [chartData]);
 
   const CustomTick = (props) => {
     const { x, y, payload } = props;
@@ -133,17 +153,23 @@ const UnitWiseBarChart = ({ title, prefix, data = [] }) => {
   };
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
+    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm ">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">{title}</h3>
       </div>
       {chartData.length === 0 ? (
         <div className="flex h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-          No {prefix} data available
+          No data available
         </div>
       ) : (
-        <div className="overflow-x-auto w-full pb-2 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
-          <div className="h-[250px] min-w-[600px] xl:min-w-0 w-full">
+        <div className="w-full overflow-x-auto pb-2">
+  <div
+    className="h-[320px]"
+    style={{
+      minWidth: `${Math.max(chartData.length * 45, 1000)}px`,
+      width: "100%",
+    }}
+  >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
