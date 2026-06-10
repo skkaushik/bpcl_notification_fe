@@ -415,15 +415,33 @@ if (!sessionId) {
                       <div className="leading-relaxed font-medium">
                         {msg.text ? renderMessageContent(msg.text) : (
                           <div className="flex items-center space-x-2 py-2">
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-0"></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-150"></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce animate-bounce-delay-300"></div>
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
                 ))}
+                
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] p-4 rounded-3xl text-sm shadow-sm bg-white text-slate-800 border border-slate-200 rounded-bl-sm">
+                      <div className="flex items-center space-x-2 mb-2 text-indigo-600">
+                        <BsStars size={16} />
+                        <span className="font-bold text-xs uppercase tracking-wider">Copilot</span>
+                      </div>
+                      <div className="leading-relaxed font-medium">
+                        <div className="flex items-center space-x-2 py-2">
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -443,7 +461,7 @@ if (!sessionId) {
               <button
                 onClick={() => handleSend(input)}
                 disabled={isLoading || !input.trim()}
-                className={`ml-2 p-2 rounded-xl transition-colors flex shrink-0 ${input.trim()
+                className={`ml-2 p-2 rounded-xl transition-colors cursor-pointer flex shrink-0 ${input.trim()
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
                   : 'text-slate-300'
                   }`}
