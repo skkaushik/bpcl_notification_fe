@@ -162,7 +162,7 @@ const UnitWiseBarChart = ({
           No data available
         </div>
       ) : (
-        <div className="w-full overflow-x-auto pb-2">
+        <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
   <div
     className="h-[320px]"
     style={{

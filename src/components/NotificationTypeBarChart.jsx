@@ -1,13 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
+  Treemap,
   Tooltip,
-  CartesianGrid,
-  LabelList,
 } from 'recharts';
 
 const normalizeKey = (key = '') =>
@@ -66,14 +61,14 @@ const defaultTypes = [
 ];
 
 const buildChartData = (data) => {
-const DEPARTMENTS = [
-  "MR",
-  "MS",
-  "MI",
-  "ME",
-  "FS",
-  "MC",
-];
+  const DEPARTMENTS = [
+    "MR",
+    "MS",
+    "MI",
+    "ME",
+    "FS",
+    "MC",
+  ];
   console.log('Chart Excel Data:', data);
 
   const notificationSets = defaultTypes.reduce((acc, type) => {
@@ -123,12 +118,12 @@ const DEPARTMENTS = [
       .toUpperCase();
 
     if (
-  !DEPARTMENTS.some(prefix =>
-    rawUnit.startsWith(prefix)
-  )
-) {
-  return;
-}
+      !DEPARTMENTS.some(prefix =>
+        rawUnit.startsWith(prefix)
+      )
+    ) {
+      return;
+    }
 
     if (defaultTypes.includes(normalizedType) && notifId) {
       notificationSets[normalizedType].add(notifId);
@@ -139,6 +134,79 @@ const DEPARTMENTS = [
     name,
     value: notificationSets[name].size,
   }));
+};
+
+const COLORS = [
+  '#695aa2', // violet 300
+  '#4b9f7d', // emerald 300
+  '#fcd34d', // amber 300
+  '#ef4444', // red 300
+  '#2d4868', // sky 300
+  '#863562', // pink 300
+  '#fdba74', // orange 300
+  '#2fbaf6', // blue 300
+  '#78e7b3', // emerald 200
+];
+
+
+const CustomizedContent = (props) => {
+  const { x, y, width, height, index, name, value } = props;
+  const labelFontSize =
+  width > 150 ? 18 :
+  width > 100 ? 15 :
+  width > 60 ? 12 :
+  width > 40 ? 10 :
+  8;
+
+const valueFontSize =
+  width > 150 ? 18 :
+  width > 100 ? 15 :
+  width > 60 ? 12 :
+  width > 40 ? 10 :
+  8;
+
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: COLORS[index % COLORS.length],
+          stroke: '#ffffff',
+          strokeWidth: 2,
+          strokeOpacity: 1,
+          transition: 'all 0.3s ease',
+        }}
+        className="hover:opacity-80 cursor-pointer"
+      />
+      <text
+  x={x + width / 2}
+  y={y + height / 2 - 8}
+  textAnchor="middle"
+  fill="#ffffff"
+  fontSize={labelFontSize}
+  fontWeight="600"
+  dominantBaseline="central"
+>
+  {name}
+</text>
+      {value > 0 && (
+        <text
+  x={x + width / 2}
+  y={y + height / 2 + 8}
+  textAnchor="middle"
+  fill="#ffffff"
+  fontSize={valueFontSize}
+  fontWeight="600"
+  dominantBaseline="central"
+>
+  {value}
+</text>
+      )}
+    </g>
+  );
 };
 
 const NotificationTypeBarChart = ({ data = [] }) => {
@@ -152,97 +220,34 @@ const NotificationTypeBarChart = ({ data = [] }) => {
 
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-lg font-bold text-gray-900">
             Number of Notifications vs Notification Type
           </h3>
-
-          <p className="text-sm text-slate-500">
-            Counts are calculated from uploaded Excel data.
-          </p>
         </div>
       </div>
 
       <div className="w-full">
         <div className="h-[250px] sm:h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{
-                top: 20,
-                right: 20,
-                left: 20,
-                bottom: 0,
-              }}
-            >
-
-              <defs>
-                <linearGradient
-                  id="notificationBarGradient"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#2563eb" />
-                </linearGradient>
-              </defs>
-
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="#e2e8f0"
-              />
-
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{
-                  fill: '#64748B',
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-                tickMargin={12}
-              />
-
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{
-                  fill: '#64748B',
-                  fontSize: 12,
-                }}
-                width={40}
-              />
-
-              <Tooltip
-                cursor={{
-                  fill: 'rgba(15, 23, 42, 0.04)',
-                }}
-                formatter={(value) => [
-                  value,
-                  'Notifications',
-                ]}
-              />
-
-              <Bar
+          {chartData.filter(d => d.value > 0).length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <Treemap
+                data={chartData.filter(d => d.value > 0)}
                 dataKey="value"
-                fill="url(#notificationBarGradient)"
-                radius={[6, 6, 0, 0]}
-                maxBarSize={40}
-                animationDuration={800}
+                aspectRatio={4 / 3}
+                stroke="#fff"
+                content={<CustomizedContent />}
               >
-                <LabelList
-                  dataKey="value"
-                  position="top"
-                  fill="#0f172a"
-                  fontSize={12}
-                  fontWeight={700}
+                <Tooltip
+                  formatter={(value) => [value, 'Notifications']}
+                  itemStyle={{ color: '#000000' }}
                 />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              </Treemap>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              No data available
+            </div>
+          )}
         </div>
       </div>
     </div>
