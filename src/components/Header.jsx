@@ -27,7 +27,7 @@ const Header = ({
               <span className="text-white text-sm">⚡</span>
             </div>
             <h1 className="text-base font-black leading-none tracking-tight text-slate-900">
-              Notifications Analytics
+              Notifications Analytics Dashboard
             </h1>
           </div>
         </div>
@@ -35,15 +35,15 @@ const Header = ({
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {hasData && (
             <div className="relative">
-             <button
+              <button
                 onClick={() => {
                   console.log("ASK AI CLICKED");
                   onOpenAIChat?.();
                 }}
-                 className="cursor-pointer relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
-                 
+                className="cursor-pointer relative group flex items-center justify-center p-[1.5px] rounded-full bg-gradient-to-r from-blue-500 via-purple-400 to-orange-500 shadow-sm hover:shadow-md hover:scale-105 transition-all"
+
               >
-                
+
                 <div className="flex items-center gap-2 px-5 py-1.5 bg-white rounded-full h-full w-full">
                   <BsStars size={18} className="text-orange-500" />
                   <span className="text-sm font-bold text-slate-800">Ask AI</span>
@@ -90,7 +90,7 @@ const Header = ({
           </button>
         </div>
       )}
-{/* 
+      {/* 
       {showKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in border border-slate-200">
