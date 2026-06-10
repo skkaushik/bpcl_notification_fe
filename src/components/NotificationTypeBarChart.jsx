@@ -137,19 +137,33 @@ const buildChartData = (data) => {
 };
 
 const COLORS = [
-  '#7dd3fc', // sky 300
-  '#6ee7b7', // emerald 300
+  '#695aa2', // violet 300
+  '#4b9f7d', // emerald 300
   '#fcd34d', // amber 300
-  '#fca5a5', // red 300
-  '#c4b5fd', // violet 300
-  '#f9a8d4', // pink 300
+  '#ef4444', // red 300
+  '#2d4868', // sky 300
+  '#863562', // pink 300
   '#fdba74', // orange 300
-  '#93c5fd', // blue 300
-  '#a7f3d0', // emerald 200
+  '#2fbaf6', // blue 300
+  '#78e7b3', // emerald 200
 ];
+
 
 const CustomizedContent = (props) => {
   const { x, y, width, height, index, name, value } = props;
+  const labelFontSize =
+  width > 150 ? 18 :
+  width > 100 ? 15 :
+  width > 60 ? 12 :
+  width > 40 ? 10 :
+  8;
+
+const valueFontSize =
+  width > 150 ? 18 :
+  width > 100 ? 15 :
+  width > 60 ? 12 :
+  width > 40 ? 10 :
+  8;
 
   return (
     <g>
@@ -168,28 +182,28 @@ const CustomizedContent = (props) => {
         className="hover:opacity-80 cursor-pointer"
       />
       <text
-        x={x + width / 2}
-        y={y + height / 2 - 8}
-        textAnchor="middle"
-        fill="#000000"
-        fontSize={width > 40 ? 15 : 11}
-        fontWeight="bold"
-        dominantBaseline="central"
-      >
-        {name}
-      </text>
+  x={x + width / 2}
+  y={y + height / 2 - 8}
+  textAnchor="middle"
+  fill="#ffffff"
+  fontSize={labelFontSize}
+  fontWeight="600"
+  dominantBaseline="central"
+>
+  {name}
+</text>
       {value > 0 && (
         <text
-          x={x + width / 2}
-          y={y + height / 2 + 10}
-          textAnchor="middle"
-          fill="#000000"
-          fontSize={width > 40 ? 13 : 10}
-          fontWeight="bold"
-          dominantBaseline="central"
-        >
-          {value}
-        </text>
+  x={x + width / 2}
+  y={y + height / 2 + 8}
+  textAnchor="middle"
+  fill="#ffffff"
+  fontSize={valueFontSize}
+  fontWeight="600"
+  dominantBaseline="central"
+>
+  {value}
+</text>
       )}
     </g>
   );
