@@ -217,6 +217,12 @@ textarea {
   color: #4338ca !important;
 }
 
+.react-datepicker__close-icon {
+  right: 40px !important; /* calendar icon se pehle */
+  padding-right: 0 !important;
+}
+
+
 .react-datepicker__close-icon::after {
   background-color: #4f46e5 !important;
   border-radius: 50% !important;
