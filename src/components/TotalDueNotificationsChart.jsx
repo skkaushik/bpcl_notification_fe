@@ -12,7 +12,7 @@ import {
 
 const TotalDueNotificationsChart = ({ data }) => {
   return (
-    <div className="mt-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
+    <div className=" bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-900">
@@ -24,7 +24,7 @@ const TotalDueNotificationsChart = ({ data }) => {
         </div>
       </div>
       <div className="w-full">
-        <div className="w-full h-[320px] sm:h-[470px]">
+        <div className="w-full h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
               <defs>
