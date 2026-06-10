@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { uploadFileApi } from "../services/uploadService";
 
 const UploadDataDialog = ({
@@ -11,6 +11,11 @@ const UploadDataDialog = ({
 }) => {
   const fileInputRef = useRef(null);
 const [isUploading, setIsUploading] = useState(false);
+useEffect(() => {
+  if (!isOpen) {
+    setIsUploading(false);
+  }
+}, [isOpen]);
   if (!isOpen) return null;
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
@@ -76,7 +81,7 @@ const handleUploadToBackend = async () => {
       );
 
       await processUploadedFile();
-
+     setIsUploading(false);
       onClose();
     }
   } catch (error) {

@@ -25,7 +25,7 @@ import {
 } from "../../utils/dashboardHelpers";
 
 const Dashboard = () => {
-  const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"]; 
+  const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC", "OTHERS"]; 
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [notifications, setNotifications] = useState(() => {
     if (typeof window === 'undefined') return [];
@@ -77,7 +77,7 @@ const Dashboard = () => {
     const units = new Set();
     rawData.forEach(row => {
       const rawUnit = String(row[workCtrKey] || "").trim().toUpperCase();
-      const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
+      const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC", "OTHERS"];
 
 if (
   DEPARTMENTS.some(prefix =>
@@ -231,6 +231,7 @@ if (
   "ME",
   "FS",
   "MC",
+  "OTHERS"
 ];
     if (!filteredRawData.length) return [];
 
@@ -719,7 +720,7 @@ if (
                     <BsFilter className="h-4 w-4 text-slate-800" />
                     <span>Filters</span>
                     {activeFilterCount > 0 && (
-                      <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-semibold text-black">
+                      <span className="rounded-full bg-gray-200 px-2 py-1 text-[11px] font-semibold text-black">
                         {activeFilterCount}
                       </span>
                     )}
@@ -870,6 +871,7 @@ if (
                                       ME: "Electrical (ME)",
                                       FS: "Fire & Safety (FS)",
                                       MC: "Civil (MC)",
+                                      OTHERS: "Others",
                                     }[dept]
                                   }
                                 </button>
@@ -893,7 +895,7 @@ if (
                               showMonthDropdown
                               showYearDropdown
                               dropdownMode="select"
-                              className="w-full rounded-2xl border border-slate-200 bg-white py-2 pl-3 pr-10 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                              className="w-full rounded-2xl border border-slate-200 bg-white py-2 pl-3 pr-20 text-sm font-medium text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                               isClearable
                               wrapperClassName="w-full"
                             />
@@ -962,7 +964,7 @@ if (
 
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
               <div className="lg:col-span-1 min-w-0">
-                <MrMsPieChart title="Total Notifications Unit Type Wise" data={rawData} />
+                <MrMsPieChart title="Total Notifications Unit Type Wise" data={filteredRawData} />
               </div>
               <div className="lg:col-span-2 min-w-0">
                 <NotificationTypeBarChart title="Notification Type Wise" data={filteredRawData} />
