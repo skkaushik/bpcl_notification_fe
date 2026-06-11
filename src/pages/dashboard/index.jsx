@@ -433,13 +433,42 @@ const Dashboard = () => {
       }
     }
     if (targetEmail) {
+      const selectedAge = Number(ageFilter) > 0 ? Number(ageFilter) : 1;
+      const ageLabel = selectedAge === 1 ? 'day' : 'days';
+
+      let daysPending = '0';
+      if (notification.notifDate && notification.notifDate !== 'N/A') {
+        const notifD = new Date(notification.notifDate);
+        if (!isNaN(notifD)) {
+          const diffTime = Math.abs(new Date() - notifD);
+          daysPending = Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
+        }
+      }
+
+      let rawDesc = (notification.description || '').replace(/\r?\n|\r/g, " ");
+      let desc = rawDesc.length > 27 ? rawDesc.substring(0, 27) + '...' : rawDesc;
+      let dateStr = notification.notifDate !== 'N/A' ? notification.notifDate : '';
+
+      const pad = (str, len) => String(str || '').padEnd(len, ' ').substring(0, len);
+      const sep = '-'.repeat(130);
+      const headerRow = `${pad('Plant Name', 15)}${pad('Notification No', 18)}${pad('Notification Date', 20)}${pad('Type', 14)}${pad('Description', 30)}${pad('Days', 7)}${pad('User Status', 13)}${pad('System Status', 13)}`;
+      const dataRow = `${pad(notification.workCtr, 15)}${pad(notification.id, 18)}${pad(dateStr, 20)}${pad(notification.type, 14)}${pad(desc, 30)}${pad(daysPending, 7)}${pad(notification.status, 13)}${pad(notification.sysStatus, 13)}`;
+
+      let bodyStr = `Dear Sir,\n\n`;
+      bodyStr += `Please find below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
+      bodyStr += `${sep}\n`;
+      bodyStr += `${headerRow}\n`;
+      bodyStr += `${sep}\n`;
+      bodyStr += `${dataRow}\n`;
+      bodyStr += `${sep}\n\n`;
+      bodyStr += `Kindly take necessary action.\n\n`;
+      bodyStr += `Regards,\nMechanical Maintenance Team`;
+
       const subject = encodeURIComponent(
-        `Notification Alert: ${notification.id} - ${notification.equip}`
+        `Pending Notifications - ${plantName} (Last ${selectedAge} ${ageLabel})`
       );
 
-      const body = encodeURIComponent(
-        `Hello,\n\nPlease review the following notification details:\n\nNotification ID: ${notification.id}\nEquipment: ${notification.equip}\nType: ${notification.type}\nStatus: ${notification.status}\nWork Center: ${notification.workCtr}\nRequired End: ${notification.requiredEnd}\n\nThank you.`
-      );
+      const body = encodeURIComponent(bodyStr);
 
       window.open(
         `mailto:${targetEmail}?subject=${subject}&body=${body}`,
@@ -653,9 +682,15 @@ const Dashboard = () => {
 
       const subject = `Pending Notifications - ${plantName} (Last ${selectedAge} ${ageLabel})`;
 
+      const pad = (str, len) => String(str || '').padEnd(len, ' ').substring(0, len);
+      const sep = '-'.repeat(130);
+      const headerRow = `${pad('Plant Name', 15)}${pad('Notification No', 18)}${pad('Notification Date', 20)}${pad('Type', 14)}${pad('Description', 30)}${pad('Days', 7)}${pad('User Status', 13)}${pad('System Status', 13)}`;
+
       let bodyStr = `Dear Sir,\n\n`;
-      bodyStr += `Please find Below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
-      bodyStr += `Plant name\tNotification no\tNotification Date\tNotification Type\tDescription\tDays Pending\tUser status\tSystem status\n`;
+      bodyStr += `Please find below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
+      bodyStr += `${sep}\n`;
+      bodyStr += `${headerRow}\n`;
+      bodyStr += `${sep}\n`;
 
       notifs.forEach((n) => {
         let daysPending = '0';
@@ -667,13 +702,15 @@ const Dashboard = () => {
           }
         }
 
-        let desc = (n.description || '').replace(/\r?\n|\r/g, " ").substring(0, 60);
+        let rawDesc = (n.description || '').replace(/\r?\n|\r/g, " ");
+        let desc = rawDesc.length > 27 ? rawDesc.substring(0, 27) + '...' : rawDesc;
         let dateStr = n.notifDate !== 'N/A' ? n.notifDate : '';
 
-        bodyStr += `${n.workCtr}\t${n.id}\t${dateStr}\t${n.type}\t${desc}\t${daysPending}\t${n.status}\t${n.sysStatus}\n`;
+        bodyStr += `${pad(n.workCtr, 15)}${pad(n.id, 18)}${pad(dateStr, 20)}${pad(n.type, 14)}${pad(desc, 30)}${pad(daysPending, 7)}${pad(n.status, 13)}${pad(n.sysStatus, 13)}\n`;
       });
 
-      bodyStr += `\nKindly take necessary action.\n\n`;
+      bodyStr += `${sep}\n\n`;
+      bodyStr += `Kindly take necessary action.\n\n`;
       bodyStr += `Regards,\nMechanical Maintenance Team`;
 
       const encodedSubject = encodeURIComponent(subject);
