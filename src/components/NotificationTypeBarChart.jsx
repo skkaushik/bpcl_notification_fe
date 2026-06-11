@@ -148,21 +148,21 @@ const NotificationTypeBarChart = ({ data = [] }) => {
   }, [data]);
 
   return (
-    <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm ">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="w-full h-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm flex flex-col">
+      <div className="mb-3 flex items-center justify-between shrink-0">
         <h3 className="text-lg font-bold text-slate-900">
            Notification Type
         </h3>
       </div>
 
       {chartData.filter(d => d.value > 0).length === 0 ? (
-        <div className="flex h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+        <div className="flex flex-1 min-h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
           No data available
         </div>
       ) : (
-        <div className="w-full">
+        <div className="w-full flex-1 flex flex-col">
           {/* <div className="h-[250px] sm:h-[300px]"> */}
-          <div className="w-full h-[300px]">
+          <div className="w-full flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData.filter(d => d.value > 0)}
