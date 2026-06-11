@@ -100,19 +100,34 @@ const handleUploadToBackend = async () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
-        <div className="mb-6">
-          <h3 className="text-2xl font-bold text-slate-900">
-            Upload Data File
-          </h3>
-          <p className="mt-2 text-sm text-slate-500">
-            Upload Excel file for dashboard analytics
-          </p>
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900">
+              Upload Data File
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Upload Excel file for dashboard analytics
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50 p-1"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="mb-5">
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-indigo-500 hover:bg-indigo-50/50 transition-all"
+            className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-[#003865] hover:bg-[#003865]/10 transition-all"
           >
             <svg
               className="mx-auto mb-3 h-12 w-12 text-slate-400"
@@ -199,8 +214,8 @@ const handleUploadToBackend = async () => {
   className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold text-white transition-all
     ${
       uploadLoading || isUploading
-        ? "bg-indigo-400 cursor-not-allowed"
-        : "bg-indigo-600 hover:bg-indigo-700"
+        ? "bg-[#003865]/50 cursor-not-allowed"
+        : "bg-[#003865] hover:bg-[#002244]"
     }`}
 >
   {isUploading ? (

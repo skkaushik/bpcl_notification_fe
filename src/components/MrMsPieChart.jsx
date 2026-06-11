@@ -22,12 +22,12 @@ const findKey = (row = {}, targets = [], exclude = []) => {
 };
 
 const COLORS = [
-  '#f59e0b', // MR
-  '#3b82f6', // MS
-  '#10b981', // MI
-  '#ef4444', // ME
-  '#8b5cf6', // FS
-  '#06b6d4', // MC
+  '#ca8714', // MR
+  '#367cec', // MS
+  '#00885b', // MI
+  '#b80b0b', // ME
+  '#154c7a', // FS
+  '#0a869c', // MC
 ];
 const MrMsPieChart = ({ data = [] }) => {
   const chartData = useMemo(() => {

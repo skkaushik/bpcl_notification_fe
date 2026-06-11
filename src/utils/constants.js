@@ -12,7 +12,7 @@ export const KPI_CARDS_CONFIG = [
   {
     key: 'impactedUnits',
     label: 'Units impacted',
-    textColor: 'text-[#0F172A]',
+    textColor: 'text-[#EAB308]',
     leftBorderColor: 'border-l-[#EAB308]',
     iconBg: 'bg-[#FEF9C3]',
     bgColor: 'bg-gradient-to-br from-[#FEFCE8] to-[#FEF9C3]/40',
