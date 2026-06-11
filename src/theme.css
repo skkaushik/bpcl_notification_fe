@@ -1,0 +1,49 @@
+:root {
+  /* Main Theme Colors */
+  --color-primary: #003865; /* Deep Blue */
+  --color-secondary: #ffc000; /* Bright Yellow */
+  
+  /* Text Colors */
+  --text-color-primary: #ffffff;
+  --text-color-secondary: #003865;
+  --text-color-muted: #64748b;
+
+  /* Typography */
+  --font-family-base: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+}
+
+/* Custom Theme Utility Classes */
+.bg-theme-primary { background-color: var(--color-primary); }
+.bg-theme-secondary { background-color: var(--color-secondary); }
+.text-theme-primary { color: var(--color-primary); }
+.text-theme-secondary { color: var(--color-secondary); }
+.text-theme-on-primary { color: var(--text-color-primary); }
+.text-theme-on-secondary { color: var(--text-color-secondary); }
+.font-theme { font-family: var(--font-family-base); }
+
+/* Marquee Animation */
+@keyframes theme-marquee {
+  0% {
+    transform: translateX(100vw);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-theme-marquee {
+  display: inline-block;
+  animation: theme-marquee 15s linear infinite;
+  white-space: nowrap;
+  will-change: transform;
+}

@@ -39,38 +39,38 @@ const UnitWiseBarChart = ({
     const grouped = {};
 
     data.forEach((row) => {
-  const rawUnitStr = String(row[unitKey] ?? '')
-    .trim()
-    .toUpperCase();
+      const rawUnitStr = String(row[unitKey] ?? '')
+        .trim()
+        .toUpperCase();
 
-  const deptPrefix = rawUnitStr.substring(0, 2);
+      const deptPrefix = rawUnitStr.substring(0, 2);
 
-  const isAllowed =
-    selectedDepartments.length === 0 ||
-    selectedDepartments.includes(deptPrefix);
+      const isAllowed =
+        selectedDepartments.length === 0 ||
+        selectedDepartments.includes(deptPrefix);
 
-  if (!isAllowed) return;
+      if (!isAllowed) return;
 
-  const unitName = rawUnitStr.substring(2);
+      const unitName = rawUnitStr.substring(2);
 
-  const rawType = String(row[typeKey] ?? '')
-    .trim()
-    .toUpperCase();
+      const rawType = String(row[typeKey] ?? '')
+        .trim()
+        .toUpperCase();
 
-  const typeName = rawType.replace(/\s+/g, '');
+      const typeName = rawType.replace(/\s+/g, '');
 
-  const notifId = String(row[notifKey] ?? '').trim();
+      const notifId = String(row[notifKey] ?? '').trim();
 
-  if (unitName && typeName && notifId) {
-    if (!grouped[unitName]) grouped[unitName] = {};
+      if (unitName && typeName && notifId) {
+        if (!grouped[unitName]) grouped[unitName] = {};
 
-    if (!grouped[unitName][typeName]) {
-      grouped[unitName][typeName] = new Set();
-    }
+        if (!grouped[unitName][typeName]) {
+          grouped[unitName][typeName] = new Set();
+        }
 
-    grouped[unitName][typeName].add(notifId);
-  }
-});
+        grouped[unitName][typeName].add(notifId);
+      }
+    });
     const result = [];
     Object.keys(grouped).sort().forEach((unit) => {
       Object.keys(grouped[unit]).sort().forEach((type) => {
@@ -86,8 +86,8 @@ const UnitWiseBarChart = ({
     return result;
   }, [data, selectedDepartments]);
   const chartWidth = useMemo(() => {
-  return Math.max(chartData.length * 55, 1400);
-}, [chartData]);
+    return Math.max(chartData.length * 55, 1400);
+  }, [chartData]);
 
   const CustomTick = (props) => {
     const { x, y, payload } = props;
@@ -163,17 +163,17 @@ const UnitWiseBarChart = ({
         </div>
       ) : (
         <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-  <div
-    className="h-[320px]"
-    style={{
-      minWidth: `${Math.max(chartData.length * 45, 1000)}px`,
-      width: "100%",
-    }}
-  >
+          <div
+            className="h-[320px]"
+            style={{
+              minWidth: `${Math.max(chartData.length * 45, 1000)}px`,
+              width: "100%",
+            }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 20, left: -20, bottom: 5 }}
+                margin={{ top: 20, right: 20, left: -5, bottom: 5 }}
               >
 
                 <defs>

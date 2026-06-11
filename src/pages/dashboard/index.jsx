@@ -13,7 +13,6 @@ import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import { useState, useRef, useEffect, useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { BsUpload, BsEnvelope, BsArrowCounterclockwise, BsCalendarDate } from "react-icons/bs";
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { emailConfig } from "../../data/emailConfig";
@@ -53,12 +52,23 @@ const Dashboard = () => {
   const [activeTypeFilter, setActiveTypeFilter] = useState([]);
   const [activeUnitFilter, setActiveUnitFilter] = useState([]);
   const [activeDeptFilter, setActiveDeptFilter] = useState([]);
+  const [activeUserStatusFilter, setActiveUserStatusFilter] = useState([]);
+  const [activeSystemStatusFilter, setActiveSystemStatusFilter] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState([null, null]);
   const [startDateFilter, endDateFilter] = dateRange;
   const [ageFilter, setAgeFilter] = useState(0);
 
-
+  const USER_STATUSES = ["APRD", "APRE", "APRJ", "JBCO", "JBPR", "(Blanks)"];
+  const SYS_STATUSES = ["NOPR", "NOPR ORAS", "OSNO"];
+  const USER_STATUS_ROWS = [
+  ["APRD", "APRE", "APRJ"],
+  ["JBCO", "JBPR", "(Blanks)"],
+];
+  const SYS_STATUS_ROWS = [
+    ["NOPR", "OSNO"],
+    ["NOPR ORAS"],
+  ];
 
   const availableUnits = useMemo(() => {
     if (!rawData.length) return [];
@@ -89,14 +99,18 @@ const Dashboard = () => {
     const DEPARTMENTS = ["MR", "MS", "MI", "ME", "FS", "MC"];
     const allDeptsSelected =
       activeDeptFilter.length === DEPARTMENTS.length;
+    const allUserStatusSelected = activeUserStatusFilter.length === USER_STATUSES.length;
+    const allSysStatusSelected = activeSystemStatusFilter.length === SYS_STATUSES.length;
 
     if (activeUnitFilter.length && !allUnitsSelected) count += 1;
     if (activeTypeFilter.length && !allTypesSelected) count += 1;
     if (activeDeptFilter.length && !allDeptsSelected) count += 1;
+    if (activeUserStatusFilter.length && !allUserStatusSelected) count += 1;
+    if (activeSystemStatusFilter.length && !allSysStatusSelected) count += 1;
     if (dateRange[0] || dateRange[1]) count += 1;
     if (ageFilter > 0) count += 1;
     return count;
-  }, [activeUnitFilter, activeTypeFilter, activeDeptFilter, dateRange, ageFilter, availableUnits.length]);
+  }, [activeUnitFilter, activeTypeFilter, activeDeptFilter, activeUserStatusFilter, activeSystemStatusFilter, dateRange, ageFilter, availableUnits.length]);
 
   const typeKeyInData = useMemo(() => {
     if (!rawData.length) return null;
@@ -158,6 +172,35 @@ const Dashboard = () => {
       }
     }
 
+    if (activeUserStatusFilter.length > 0) {
+      const sample = rawData[0] || {};
+      const statusKey = findKey(sample, ['Status', 'User status']);
+      if (statusKey) {
+        result = result.filter((row) => {
+          const rawStatus = String(row[statusKey] || "").trim().toUpperCase();
+          return activeUserStatusFilter.some(filterStatus => {
+            if (filterStatus === '(Blanks)' && !rawStatus) return true;
+            return rawStatus.includes(filterStatus.toUpperCase());
+          });
+        });
+      }
+    }
+
+    if (activeSystemStatusFilter.length > 0) {
+      const sample = rawData[0] || {};
+      const sysStatusKey = findKey(sample, ['System status', 'Systemstatus', 'System Status']);
+      if (sysStatusKey) {
+        result = result.filter((row) => {
+          const rawSysStatus = String(row[sysStatusKey] || "").trim().toUpperCase();
+          return activeSystemStatusFilter.some(filterStatus => {
+             // Use exact match or bounded match to prevent NOPR matching NOPR ORAS
+             if (filterStatus === 'NOPR' && rawSysStatus.includes('NOPR ORAS')) return false;
+             return rawSysStatus.includes(filterStatus.toUpperCase());
+          });
+        });
+      }
+    }
+
     const hasFullDateRange = startDateFilter && endDateFilter;
     if (hasFullDateRange || Number(ageFilter) > 0) {
       const sample = rawData[0] || {};
@@ -206,7 +249,7 @@ const Dashboard = () => {
     }
 
     return result;
-  }, [rawData, activeTypeFilter, typeKeyInData, activeUnitFilter, activeDeptFilter, startDateFilter, endDateFilter, ageFilter]);
+  }, [rawData, activeTypeFilter, typeKeyInData, activeUnitFilter, activeDeptFilter, activeUserStatusFilter, activeSystemStatusFilter, startDateFilter, endDateFilter, ageFilter]);
 
 
 
@@ -656,194 +699,207 @@ const Dashboard = () => {
       delayTime += 800;
     });
   };
-
   return (
-    <Layout hasData={rawData.length > 0}>
-
-      <div className="px-4 py-4">
+    <Layout
+      hasData={rawData.length > 0}
+      dateRange={dateRange}
+      setDateRange={setDateRange}
+      ageFilter={ageFilter}
+      setAgeFilter={setAgeFilter}
+      onUploadClick={() => setShowUploadDialog(true)}
+      onSendEmailClick={handleSendGroupEmail}
+    >
+      <div className="px-4 py-1">
         <ProcessingOverlay uploadLoading={uploadLoading} processingPercent={processingPercent} />
         {rawData.length > 0 ? (
           <>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-bold text-slate-700 transition-colors duration-200">Apply filters for Unit, Department, and Type</h1>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 justify-end">
-                <div className="flex items-center gap-2 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[46px] transition-colors hover:border-indigo-300 group">
-                  <div className="w-[215px]">
-                    <DatePicker
-                      selectsRange
-                      startDate={dateRange[0]}
-                      endDate={dateRange[1]}
-                      onChange={(update) => setDateRange(update)}
-                      maxDate={new Date()}
-                      dateFormat="dd-MM-yyyy"
-                      placeholderText="Select date range"
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      className="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent placeholder-slate-400 cursor-pointer pr-8"
-                    // isClearable
-                    />
-                  </div>
-                  <BsCalendarDate className="text-slate-400 flex-shrink-0 w-[18px] h-[18px] group-hover:text-indigo-500 transition-colors" />
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[46px] transition-colors hover:border-indigo-300">
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="All"
-                    value={ageFilter}
-                    onChange={(e) => setAgeFilter(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-[36px] text-sm font-semibold text-slate-800 outline-none bg-transparent placeholder-slate-400 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-sm font-semibold text-slate-500">days</span>
-                </div>
-
-                <button
-                  onClick={() => setShowUploadDialog(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-[1rem] border border-purple-200 bg-white px-5 h-[46px] text-sm font-semibold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
-                >
-                  <BsUpload className="text-purple-600 text-base" />
-                  Upload New File
-                </button>
-
-
-
-                <button
-                  onClick={handleSendGroupEmail}
-                  className="inline-flex items-center justify-center gap-2 rounded-[1rem] bg-[#4F46E5] px-5 h-[46px] text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition duration-200 hover:bg-[#3730a3] hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-200 cursor-pointer"
-                >
-                  <BsEnvelope className="h-4 w-4" />
-                  Send Emails
-                </button>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+              <div className="flex flex-wrap items-center gap-2 justify-end">
               </div>
             </div>
 
-            <div className="bg-slate-50/80 rounded-[24px] border border-slate-200 p-4 shadow-sm mb-4 flex flex-col gap-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-slate-200 gap-y-6">
-                <div className="flex flex-col gap-2 lg:pr-6">
-                  <label className="text-[13px] font-bold text-slate-600 px-1 capitalize">Unit</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveUnitFilter([])}
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${activeUnitFilter.length === 0 ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                    >
-                      All
-                    </button>
-                    {availableUnits.map((unit) => {
-                      const isSelected = activeUnitFilter.includes(unit);
-                      return (
-                        <button
-                          key={unit}
-                          type="button"
-                          onClick={() => {
-                            if (activeUnitFilter.length === 0 || activeUnitFilter.length === availableUnits.length) {
-                              setActiveUnitFilter([unit]);
-                            } else if (activeUnitFilter.includes(unit)) {
-                              setActiveUnitFilter(activeUnitFilter.filter((u) => u !== unit));
-                            } else {
-                              setActiveUnitFilter([...activeUnitFilter, unit]);
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${isSelected ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                        >
-                          {unit}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 lg:px-6">
-                  <label className="text-[13px] font-bold text-slate-600 px-1 capitalize">Department</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveDeptFilter([])}
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${(activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                    >
-                      All
-                    </button>
-                    {DEPARTMENTS.map((dept) => {
-                      const isSelected = activeDeptFilter.includes(dept);
-                      return (
-                        <button
-                          key={dept}
-                          type="button"
-                          onClick={() => {
-                            if (activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) {
-                              setActiveDeptFilter([dept]);
-                            } else if (activeDeptFilter.includes(dept)) {
-                              setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
-                            } else {
-                              setActiveDeptFilter([...activeDeptFilter, dept]);
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${isSelected ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                        >
-                          {{ MR: "Rotary (MR)", MS: "Static (MS)", MI: "Instrumentation (MI)", ME: "Electrical (ME)", FS: "Fire & Safety (FS)", MC: "Civil (MC)", OTHERS: "Others" }[dept] || dept}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 lg:pl-6">
-                  <label className="text-[13px] font-bold text-slate-600 px-1 capitalize">Type</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTypeFilter([])}
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${activeTypeFilter.length === 0 ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                    >
-                      All
-                    </button>
-                    {ALL_TYPES.map((type) => {
-                      const isSelected = activeTypeFilter.some((item) => item.value === type);
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => {
-                            if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
-                              setActiveTypeFilter([{ value: type, label: type }]);
-                            } else if (activeTypeFilter.some((item) => item.value === type)) {
-                              setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
-                            } else {
-                              setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${isSelected ? 'bg-indigo-200 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-slate-100 text-slate-500 border-transparent hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'}`}
-                        >
-                          {type}
-                        </button>
-                      );
-                    })}
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 mb-3">
+              <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
+                <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Unit Filter</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveUnitFilter([])}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeUnitFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    All
+                  </button>
+                  {availableUnits.map((unit) => {
+                    const isSelected = activeUnitFilter.includes(unit);
+                    return (
+                      <button
+                        key={unit}
+                        type="button"
+                        onClick={() => {
+                          if (activeUnitFilter.length === 0 || activeUnitFilter.length === availableUnits.length) {
+                            setActiveUnitFilter([unit]);
+                          } else if (activeUnitFilter.includes(unit)) {
+                            setActiveUnitFilter(activeUnitFilter.filter((u) => u !== unit));
+                          } else {
+                            setActiveUnitFilter([...activeUnitFilter, unit]);
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                      >
+                        {unit}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* <div className="flex justify-end border-t border-slate-100 pt-4 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveUnitFilter([]);
-                    setActiveTypeFilter([]);
-                    setActiveDeptFilter([]);
-                    setDateRange([null, null]);
-                    setAgeFilter(0);
-                  }}
-                  className="flex items-center justify-center gap-1.5 h-[40px] px-6 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer shadow-sm"
-                >
-                  <BsArrowCounterclockwise className="h-4 w-4" />
-                  Reset Defaults
-                </button>
-              </div> */}
+              <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
+                <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Department Filter</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDeptFilter([])}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${(activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    All
+                  </button>
+                  {DEPARTMENTS.map((dept) => {
+                    const isSelected = activeDeptFilter.includes(dept);
+                    return (
+                      <button
+                        key={dept}
+                        type="button"
+                        onClick={() => {
+                          if (activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) {
+                            setActiveDeptFilter([dept]);
+                          } else if (activeDeptFilter.includes(dept)) {
+                            setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
+                          } else {
+                            setActiveDeptFilter([...activeDeptFilter, dept]);
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                      >
+                        {{ MR: "Rotary (MR)", MS: "Static (MS)", MI: "Instrumentation (MI)", ME: "Electrical (ME)", FS: "Fire & Safety (FS)", MC: "Civil (MC)", OTHERS: "Others" }[dept] || dept}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
+                <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Notification Filter</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTypeFilter([])}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeTypeFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    All
+                  </button>
+                  {ALL_TYPES.map((type) => {
+                    const isSelected = activeTypeFilter.some((item) => item.value === type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
+                            setActiveTypeFilter([{ value: type, label: type }]);
+                          } else if (activeTypeFilter.some((item) => item.value === type)) {
+                            setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
+                          } else {
+                            setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="bg-white rounded-[12px] border border-slate-200 p-1 shadow-sm flex flex-col gap-1.5">
+                <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">User Status Filter</label>
+                <div className="flex flex-col gap-1.5">
+                  {USER_STATUS_ROWS.map((row, rowIndex) => (
+                    <div key={rowIndex} className="flex flex-wrap gap-1.5">
+                      {rowIndex === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveUserStatusFilter([])}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeUserStatusFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          All
+                        </button>
+                      )}
+                      {row.map((status) => {
+                        const isSelected = activeUserStatusFilter.includes(status);
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              if (activeUserStatusFilter.length === 0 || activeUserStatusFilter.length === USER_STATUSES.length) {
+                                setActiveUserStatusFilter([status]);
+                              } else if (activeUserStatusFilter.includes(status)) {
+                                setActiveUserStatusFilter(activeUserStatusFilter.filter((s) => s !== status));
+                              } else {
+                                setActiveUserStatusFilter([...activeUserStatusFilter, status]);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                          >
+                            {status}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
+                <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">System Status Filter</label>
+                <div className="flex flex-col gap-1.5">
+                  {SYS_STATUS_ROWS.map((row, rowIndex) => (
+                    <div key={rowIndex} className="flex flex-wrap gap-1.5">
+                      {rowIndex === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveSystemStatusFilter([])}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeSystemStatusFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          All
+                        </button>
+                      )}
+                      {row.map((status) => {
+                        const isSelected = activeSystemStatusFilter.includes(status);
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              if (activeSystemStatusFilter.length === 0 || activeSystemStatusFilter.length === SYS_STATUSES.length) {
+                                setActiveSystemStatusFilter([status]);
+                              } else if (activeSystemStatusFilter.includes(status)) {
+                                setActiveSystemStatusFilter(activeSystemStatusFilter.filter((s) => s !== status));
+                              } else {
+                                setActiveSystemStatusFilter([...activeSystemStatusFilter, status]);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                          >
+                            {status}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <KpiSection stats={stats} />
@@ -942,6 +998,6 @@ const Dashboard = () => {
       </div>
 
     </Layout>
-  );
+  )
 };
 export default Dashboard;

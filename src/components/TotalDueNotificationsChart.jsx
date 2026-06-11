@@ -23,7 +23,7 @@ const TotalDueNotificationsChart = ({ data }) => {
       <div className="w-full">
         <div className="w-full h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -8, bottom: 10 }}>
               <defs>
                 <linearGradient id="msAreaGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
