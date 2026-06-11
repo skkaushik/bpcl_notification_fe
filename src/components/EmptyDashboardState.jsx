@@ -3,7 +3,7 @@ import React from 'react';
 const EmptyDashboardState = ({ setShowUploadDialog }) => {
   return (
     <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-gray-100 px-10 py-24 text-center shadow-sm">
-      <div className="mb-6 rounded-full bg-indigo-100 p-6 text-5xl">
+      <div className="mb-6 rounded-full bg-[#003865]/10 p-6 text-5xl">
         📊
       </div>
 
@@ -19,7 +19,7 @@ const EmptyDashboardState = ({ setShowUploadDialog }) => {
 
       <button
         onClick={() => setShowUploadDialog(true)}
-        className="mt-8 rounded-2xl bg-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all cursor-pointer"
+        className="mt-8 rounded-2xl bg-[#003865] px-8 py-4 text-sm font-bold text-white shadow-lg shadow-[#003865]/20 hover:bg-[#002244] transition-all cursor-pointer"
       >
         Upload Excel File
       </button>

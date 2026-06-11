@@ -19,7 +19,7 @@ const ProcessingOverlay = ({ uploadLoading, processingPercent }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl text-center">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-indigo-50 text-5xl">
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#ffc000]/20 text-5xl">
           📊
         </div>
 
@@ -36,14 +36,14 @@ const ProcessingOverlay = ({ uploadLoading, processingPercent }) => {
             <span className="text-sm font-bold text-slate-700">
               Processing
             </span>
-            <span className="text-sm font-bold text-indigo-600">
+            <span className="text-sm font-bold text-[#003865]">
               {processingPercent}%
             </span>
           </div>
 
           <div className="h-3 overflow-hidden rounded-full bg-slate-200">
             <div
-              className={`h-full rounded-full bg-indigo-600 transition-all duration-300 ${getWidthClass(processingPercent)}`}
+              className={`h-full rounded-full bg-[#003865] transition-all duration-300 ${getWidthClass(processingPercent)}`}
             />
           </div>
         </div>
