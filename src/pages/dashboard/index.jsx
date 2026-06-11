@@ -10,6 +10,7 @@ import NotificationDetailsModal from "../../components/NotificationDetailsModal"
 import EmptyDashboardState from "../../components/EmptyDashboardState";
 import CriticalEquipmentTable from "../../components/CriticalEquipmentTable";
 import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
+import TopEquipmentBarChart from "../../components/TopEquipmentBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -995,15 +996,23 @@ const Dashboard = () => {
               <div className="lg:col-span-1 min-w-0">
                 <MrMsPieChart title="Total Notifications Unit Type Wise" data={filteredRawData} />
               </div>
-              {/* <div className="lg:col-span-2 min-w-0">
-                <NotificationTypeBarChart title="Notification Type Wise" data={filteredRawData} />
-              </div> */}
-              <div className="lg:col-span-2 min-w-0">
-              <UnitWiseBarChart
-                title="Notification Unit Wise"
-                data={filteredRawData}
-                selectedDepartments={activeDeptFilter}
-              />
+              <div className="lg:col-span-1 min-w-0">
+                <NotificationTypeBarChart
+                  title="Notification Type Wise"
+                  data={filteredRawData}
+                />
+              </div>
+              <div className="lg:col-span-1 min-w-0">
+                <TopEquipmentBarChart 
+                  data={filteredCriticalEquipmentData}
+                  onEquipmentClick={(item) => {
+                    setSelectedEquipment(prev => prev && prev.displayEquipId === item.displayEquipId ? null : item);
+                    document.getElementById('critical-equipment-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  onViewAllClick={() => {
+                    document.getElementById('critical-equipment-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                />
               </div>
             </div>
               {/* <UnitWiseBarChart
@@ -1048,9 +1057,10 @@ const Dashboard = () => {
               /> */}
                 <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
   <div className="min-w-0">
-    <NotificationTypeBarChart
-      title="Notification Type Wise"
+    <UnitWiseBarChart
+      title="Notification Unit Wise"
       data={filteredRawData}
+      selectedDepartments={activeDeptFilter}
     />
   </div>
 
@@ -1059,7 +1069,9 @@ const Dashboard = () => {
   </div>
 </div>
 
-            <div className="mt-4 flex gap-4 items-stretch overflow-hidden">
+
+
+            <div id="critical-equipment-table-section" className="mt-4 flex gap-4 items-stretch overflow-hidden">
               <div className={`transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[calc(100%-520px)]' : 'w-full'} flex-1 min-w-0`}>
                 <CriticalEquipmentTable
                   searchQuery={searchQuery}

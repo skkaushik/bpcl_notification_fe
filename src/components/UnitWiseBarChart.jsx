@@ -153,18 +153,18 @@ const UnitWiseBarChart = ({
   };
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm ">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="w-full h-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm flex flex-col">
+      <div className="mb-3 flex items-center justify-between shrink-0">
         <h3 className="text-lg font-bold text-slate-900">{title}</h3>
       </div>
       {chartData.length === 0 ? (
-        <div className="flex h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+        <div className="flex flex-1 min-h-[250px] items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
           No data available
         </div>
       ) : (
-        <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+        <div className="w-full flex-1 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-[#003865]/40 hover:scrollbar-thumb-[#003865]/70 scrollbar-track-transparent">
           <div
-            className="h-[320px]"
+            className="h-[320px] min-h-[320px]"
             style={{
               minWidth: `${Math.max(chartData.length * 45, 1000)}px`,
               width: "100%",

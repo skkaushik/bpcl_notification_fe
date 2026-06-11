@@ -104,10 +104,10 @@ const MrMsPieChart = ({ data = [] }) => {
               />
             </Pie>
             <Tooltip 
-              formatter={(value) => [`${value} Notifications`, undefined]}
+              formatter={(value, name) => [`${value} Notifications`, name.split(':')[0]]}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
-            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: '500', color: '#475569' }} />
+            <Legend layout="horizontal" verticalAlign="bottom" align="center" iconType="square" wrapperStyle={{ fontSize: '14px', fontWeight: '500', color: '#475569', paddingTop: '10px' }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
