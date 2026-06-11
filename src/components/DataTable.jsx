@@ -1,4 +1,5 @@
 import React from "react";
+import "../index.css";
 
 const DataTable = ({
   columns = [],
@@ -12,14 +13,14 @@ const DataTable = ({
       <div className={`overflow-auto ${maxHeightClass}`}>
         <table className="w-full">
 
-          <thead className="sticky top-0 z-10 bg-slate-50">
+          <thead className="sticky top-0 z-10 bg-[#003865]">
 
             <tr>
 
               {columns.map((column) => (
-                <th className="relative"
+                <th
                   key={column.key}
-                  className="border-b px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                  className="relative border-b border-[#003865] px-4 py-3 text-left text-sm font-semibold text-white uppercase tracking-wider"
                 >
                   {column.header}
                 </th>

@@ -62,9 +62,9 @@ const Dashboard = () => {
   const USER_STATUSES = ["APRD", "APRE", "APRJ", "JBCO", "JBPR", "(Blanks)"];
   const SYS_STATUSES = ["NOPR", "NOPR ORAS", "OSNO"];
   const USER_STATUS_ROWS = [
-  ["APRD", "APRE", "APRJ"],
-  ["JBCO", "JBPR", "(Blanks)"],
-];
+    ["APRD", "APRE", "APRJ"],
+    ["JBCO", "JBPR", "(Blanks)"],
+  ];
   const SYS_STATUS_ROWS = [
     ["NOPR", "OSNO"],
     ["NOPR ORAS"],
@@ -193,9 +193,9 @@ const Dashboard = () => {
         result = result.filter((row) => {
           const rawSysStatus = String(row[sysStatusKey] || "").trim().toUpperCase();
           return activeSystemStatusFilter.some(filterStatus => {
-             // Use exact match or bounded match to prevent NOPR matching NOPR ORAS
-             if (filterStatus === 'NOPR' && rawSysStatus.includes('NOPR ORAS')) return false;
-             return rawSysStatus.includes(filterStatus.toUpperCase());
+            // Use exact match or bounded match to prevent NOPR matching NOPR ORAS
+            if (filterStatus === 'NOPR' && rawSysStatus.includes('NOPR ORAS')) return false;
+            return rawSysStatus.includes(filterStatus.toUpperCase());
           });
         });
       }
@@ -719,7 +719,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 mb-3">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto_auto] gap-2 mb-3">
               <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
                 <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Unit Filter</label>
                 <div className="flex flex-wrap gap-1.5">
@@ -756,69 +756,119 @@ const Dashboard = () => {
 
               <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
                 <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Department Filter</label>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDeptFilter([])}
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${(activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                  >
-                    All
-                  </button>
-                  {DEPARTMENTS.map((dept) => {
-                    const isSelected = activeDeptFilter.includes(dept);
-                    return (
-                      <button
-                        key={dept}
-                        type="button"
-                        onClick={() => {
-                          if (activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) {
-                            setActiveDeptFilter([dept]);
-                          } else if (activeDeptFilter.includes(dept)) {
-                            setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
-                          } else {
-                            setActiveDeptFilter([...activeDeptFilter, dept]);
-                          }
-                        }}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                      >
-                        {{ MR: "Rotary (MR)", MS: "Static (MS)", MI: "Instrumentation (MI)", ME: "Electrical (ME)", FS: "Fire & Safety (FS)", MC: "Civil (MC)", OTHERS: "Others" }[dept] || dept}
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDeptFilter([])}
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${(activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                    >
+                      All
+                    </button>
+                    {DEPARTMENTS.slice(0, 4).map((dept) => {
+                      const isSelected = activeDeptFilter.includes(dept);
+                      return (
+                        <button
+                          key={dept}
+                          type="button"
+                          onClick={() => {
+                            if (activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) {
+                              setActiveDeptFilter([dept]);
+                            } else if (activeDeptFilter.includes(dept)) {
+                              setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
+                            } else {
+                              setActiveDeptFilter([...activeDeptFilter, dept]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          {{ MR: "Rotary (MR)", MS: "Static (MS)", MI: "Instrumentation (MI)", ME: "Electrical (ME)", FS: "Fire & Safety (FS)", MC: "Civil (MC)", OTHERS: "Others" }[dept] || dept}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DEPARTMENTS.slice(4).map((dept) => {
+                      const isSelected = activeDeptFilter.includes(dept);
+                      return (
+                        <button
+                          key={dept}
+                          type="button"
+                          onClick={() => {
+                            if (activeDeptFilter.length === 0 || activeDeptFilter.length === DEPARTMENTS.length) {
+                              setActiveDeptFilter([dept]);
+                            } else if (activeDeptFilter.includes(dept)) {
+                              setActiveDeptFilter(activeDeptFilter.filter((d) => d !== dept));
+                            } else {
+                              setActiveDeptFilter([...activeDeptFilter, dept]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          {{ MR: "Rotary (MR)", MS: "Static (MS)", MI: "Instrumentation (MI)", ME: "Electrical (ME)", FS: "Fire & Safety (FS)", MC: "Civil (MC)", OTHERS: "Others" }[dept] || dept}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-[12px] border border-slate-200 p-2 shadow-sm flex flex-col gap-1.5">
                 <label className="text-[12px] font-black capitalize tracking-wider text-slate-500 truncate">Notification Filter</label>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTypeFilter([])}
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeTypeFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                  >
-                    All
-                  </button>
-                  {ALL_TYPES.map((type) => {
-                    const isSelected = activeTypeFilter.some((item) => item.value === type);
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
-                            setActiveTypeFilter([{ value: type, label: type }]);
-                          } else if (activeTypeFilter.some((item) => item.value === type)) {
-                            setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
-                          } else {
-                            setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
-                          }
-                        }}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                      >
-                        {type}
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTypeFilter([])}
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${activeTypeFilter.length === 0 ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                    >
+                      All
+                    </button>
+                    {ALL_TYPES.slice(0, 4).map((type) => {
+                      const isSelected = activeTypeFilter.some((item) => item.value === type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
+                              setActiveTypeFilter([{ value: type, label: type }]);
+                            } else if (activeTypeFilter.some((item) => item.value === type)) {
+                              setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
+                            } else {
+                              setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          {type}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALL_TYPES.slice(4).map((type) => {
+                      const isSelected = activeTypeFilter.some((item) => item.value === type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            if (activeTypeFilter.length === 0 || activeTypeFilter.length === ALL_TYPES.length) {
+                              setActiveTypeFilter([{ value: type, label: type }]);
+                            } else if (activeTypeFilter.some((item) => item.value === type)) {
+                              setActiveTypeFilter(activeTypeFilter.filter((item) => item.value !== type));
+                            } else {
+                              setActiveTypeFilter([...activeTypeFilter, { value: type, label: type }]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer border-transparent ${isSelected ? 'bg-[#003865] text-white shadow-sm hover:bg-[#003865]/90' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                        >
+                          {type}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               <div className="bg-white rounded-[12px] border border-slate-200 p-1 shadow-sm flex flex-col gap-1.5">

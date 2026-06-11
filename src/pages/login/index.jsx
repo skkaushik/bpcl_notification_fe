@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { MdOutlineMailLock, MdOutlineVpnKey } from "react-icons/md";
+import { MdOutlineMailLock, MdOutlineVpnKey, MdAnalytics } from "react-icons/md";
 import { loginApi } from "../../services/loginService";
 
 export default function LoginPage() {
@@ -71,27 +71,27 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#002244] via-[#003865] to-[#002244] p-4">
       {/* Animated background elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl -z-10 animate-pulse" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -z-10 animate-pulse" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-[#ffc000]/20 rounded-full blur-3xl -z-10 animate-pulse" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#ffc000]/10 rounded-full blur-3xl -z-10 animate-pulse" />
 
       <div className="w-full max-w-md">
         {/* Card */}
-        <div className="relative backdrop-blur-xl bg-slate-800/40 border border-slate-700/50 rounded-2xl shadow-2xl p-8">
+        <div className="relative backdrop-blur-xl bg-white border border-slate-200 rounded-2xl shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 mb-4 shadow-lg">
-              <span className="text-white text-2xl font-bold">⚡</span>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-[#ffc000] mb-4 shadow-lg">
+              <MdAnalytics className="text-[#003865] text-3xl" />
             </div>
-            <h1 className="text-3xl font-black text-white mb-2">Notifications Analytics</h1>
+            <h1 className="text-3xl font-black text-[#003865] mb-2">Notifications Analytics</h1>
           </div>
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">
             {/* Email Input */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-200">
+              <label className="block text-sm font-semibold text-slate-700">
                 Email Address
               </label>
               <div className="relative">
@@ -104,10 +104,10 @@ export default function LoginPage() {
                     setEmail(e.target.value);
                     if (errors.email) setErrors({ ...errors, email: "" });
                   }}
-                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-700/50 text-white placeholder-slate-400 focus:outline-none ${
+                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none ${
                     errors.email
                       ? "border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                      : "border-slate-600/50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      : "border-slate-200 focus:border-[#ffc000] focus:ring-2 focus:ring-[#ffc000]/20"
                   }`}
                 />
               </div>
@@ -118,7 +118,7 @@ export default function LoginPage() {
 
             {/* Password Input */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-200">
+              <label className="block text-sm font-semibold text-slate-700">
                 Password
               </label>
               <div className="relative">
@@ -131,10 +131,10 @@ export default function LoginPage() {
                     setPassword(e.target.value);
                     if (errors.password) setErrors({ ...errors, password: "" });
                   }}
-                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-700/50 text-white placeholder-slate-400 focus:outline-none ${
+                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none ${
                     errors.password
                       ? "border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                      : "border-slate-600/50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      : "border-slate-200 focus:border-[#ffc000] focus:ring-2 focus:ring-[#ffc000]/20"
                   }`}
                 />
               </div>
@@ -147,7 +147,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-7 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2"
+              className="w-full mt-7 py-3 rounded-lg font-bold text-[#003865] bg-[#ffc000] hover:bg-[#e6ac00] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

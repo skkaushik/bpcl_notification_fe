@@ -25,9 +25,9 @@ const Header = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col shadow-sm font-theme bg-theme-primary">
+    <header className="sticky top-0 z-30 flex flex-col shadow-sm bg-theme-primary">
       {/* Yellow Top Banner with Scrolling Text */}
-      <div className="h-8 flex items-center overflow-hidden whitespace-nowrap text-sm font-theme bg-theme-secondary text-theme-on-secondary font-bold">
+      <div className="h-8 flex items-center overflow-hidden whitespace-nowrap text-sm bg-theme-secondary text-theme-on-secondary font-bold">
         <div className="w-full flex items-center overflow-hidden">
           <div className="animate-theme-marquee">
             Welcome to BPCL SAP Dashboard • Select Filters and Upload Data to Begin Analysis...
@@ -40,14 +40,14 @@ const Header = ({
         <div className="flex items-center justify-between px-8 h-[60px]">
           <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
             <h1 className="text-xl sm:text-2xl font-black leading-none tracking-tight text-theme-on-primary">
-              SAP Notification Dashboard BPCL
+              SAP Notification Dashboard
             </h1>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0">
             {hasData && setDateRange && (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[38px] transition-colors hover:border-indigo-300 group">
+                <div className="flex items-center gap-2 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[38px] transition-colors hover:border-[#ffc000] group">
                   <div className="w-[180px]">
                     <DatePicker
                       selectsRange
@@ -63,10 +63,10 @@ const Header = ({
                       className="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent placeholder-slate-400 cursor-pointer"
                     />
                   </div>
-                  <BsCalendarDate className="text-slate-400 flex-shrink-0 w-[16px] h-[16px] group-hover:text-indigo-500 transition-colors" />
+                  <BsCalendarDate className="text-slate-400 flex-shrink-0 w-[16px] h-[16px] group-hover:text-[#ffc000] transition-colors" />
                 </div>
-                
-                <div className="flex items-center gap-1.5 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[38px] transition-colors hover:border-indigo-300">
+
+                <div className="flex items-center gap-1.5 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[38px] transition-colors hover:border-[#ffc000]">
                   <input
                     type="number"
                     min="0"

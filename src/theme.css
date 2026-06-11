@@ -9,7 +9,6 @@
   --text-color-muted: #64748b;
 
   /* Typography */
-  --font-family-base: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
@@ -29,7 +28,6 @@
 .text-theme-secondary { color: var(--color-secondary); }
 .text-theme-on-primary { color: var(--text-color-primary); }
 .text-theme-on-secondary { color: var(--text-color-secondary); }
-.font-theme { font-family: var(--font-family-base); }
 
 /* Marquee Animation */
 @keyframes theme-marquee {
