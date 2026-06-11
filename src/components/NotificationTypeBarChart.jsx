@@ -151,7 +151,7 @@ const NotificationTypeBarChart = ({ data = [] }) => {
     <div className="lg:col-span-2 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm ">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-lg font-bold text-slate-900">
-          Notifications vs Notification Type
+           Notification Type
         </h3>
       </div>
 
@@ -161,11 +161,12 @@ const NotificationTypeBarChart = ({ data = [] }) => {
         </div>
       ) : (
         <div className="w-full">
-          <div className="h-[250px] sm:h-[300px]">
+          {/* <div className="h-[250px] sm:h-[300px]"> */}
+          <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData.filter(d => d.value > 0)}
-                margin={{ top: 20, right: 20, left: -5, bottom: 5 }}
+                margin={{ top: 20, right: 20, left: -3, bottom: 5 }}
               >
                 <defs>
                   <linearGradient
@@ -175,8 +176,8 @@ const NotificationTypeBarChart = ({ data = [] }) => {
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#2563eb" />
+                    <stop offset="0%" stopColor="#003865" />
+                    <stop offset="100%" stopColor="#4866c9" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />

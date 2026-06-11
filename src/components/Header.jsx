@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BsStars, BsCalendarDate, BsUpload, BsEnvelope } from 'react-icons/bs';
+import { BsStars, BsCalendarDate, BsUpload, BsEnvelope, BsXCircle } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -38,11 +38,24 @@ const Header = ({
       {/* Main Blue Header Area */}
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-8 h-[60px]">
-          <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
-            <h1 className="text-xl sm:text-2xl font-black leading-none tracking-tight text-theme-on-primary">
-              SAP Notification Dashboard
-            </h1>
-          </div>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+  <h1
+  className="
+    text-[10px]
+    sm:text-[14px]
+    md:text-[18px]
+    lg:text-[26px]
+    font-black
+    leading-tight
+    tracking-tight
+    text-theme-on-primary
+    whitespace-normal
+    break-words
+  "
+>
+    SAP Notification Dashboard
+  </h1>
+</div>
 
           <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0">
             {hasData && setDateRange && (
@@ -61,9 +74,25 @@ const Header = ({
                       showYearDropdown
                       dropdownMode="select"
                       className="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent placeholder-slate-400 cursor-pointer"
+
                     />
                   </div>
-                  <BsCalendarDate className="text-slate-400 flex-shrink-0 w-[16px] h-[16px] group-hover:text-[#ffc000] transition-colors" />
+                  <div className="flex items-center gap-2">
+                    {(dateRange?.[0] || dateRange?.[1]) && (
+                      <BsXCircle
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDateRange([null, null]);
+                        }}
+                        className="cursor-pointer text-slate-800 hover:text-blue-500 transition-colors w-[16px] h-[16px]"
+                        title="Clear Date Range"
+                      />
+                    )}
+
+                    <BsCalendarDate
+                      className="text-slate-400 flex-shrink-0 w-[16px] h-[16px] group-hover:text-[#ffc000] transition-colors"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 bg-white rounded-[1rem] border border-slate-200 shadow-sm px-4 h-[38px] transition-colors hover:border-[#ffc000]">

@@ -184,8 +184,8 @@ const UnitWiseBarChart = ({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#2563eb" />
+                    <stop offset="0%" stopColor="#003865" />
+                    <stop offset="100%" stopColor="#4866c9" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />

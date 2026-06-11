@@ -278,11 +278,18 @@ textarea {
 }
 
 
-.rdt_headRow {
+/* .rdt_headRow {
   background-color: #edeaea !important;
+  color: #010406 !important;
+} */
+ .rdt_headRow {
+  background-color: #dee6ed !important;
   color: #010406 !important;
 }
 
-.rdt_rowHighlight:hover {
+/* .rdt_rowHighlight:hover {
   background-color: #ffc0003d !important;
+} */
+ .rdt_rowHighlight:hover {
+  background-color: #dee6ed9e !important;
 }

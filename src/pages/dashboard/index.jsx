@@ -958,12 +958,17 @@ const Dashboard = () => {
               <div className="lg:col-span-1 min-w-0">
                 <MrMsPieChart title="Total Notifications Unit Type Wise" data={filteredRawData} />
               </div>
-              <div className="lg:col-span-2 min-w-0">
+              {/* <div className="lg:col-span-2 min-w-0">
                 <NotificationTypeBarChart title="Notification Type Wise" data={filteredRawData} />
+              </div> */}
+              <div className="lg:col-span-2 min-w-0">
+              <UnitWiseBarChart
+                title="Notification Unit Wise"
+                data={filteredRawData}
+                selectedDepartments={activeDeptFilter}
+              />
               </div>
             </div>
-
-            <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
               {/* <UnitWiseBarChart
     title="Static Notification Unit Wise"
     prefix="MS"
@@ -999,14 +1004,23 @@ const Dashboard = () => {
     prefix="MC"
     data={filteredRawData}
   /> */}
-              <UnitWiseBarChart
+              {/* <UnitWiseBarChart
                 title="Notification Unit Wise"
                 data={filteredRawData}
                 selectedDepartments={activeDeptFilter}
-              />
+              /> */}
+                <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
+  <div className="min-w-0">
+    <NotificationTypeBarChart
+      title="Notification Type Wise"
+      data={filteredRawData}
+    />
+  </div>
 
-              <TotalDueNotificationsChart data={dueChartData} />
-            </div>
+  <div className="min-w-0">
+    <TotalDueNotificationsChart data={dueChartData} />
+  </div>
+</div>
 
             <div className="mt-4 flex gap-4 items-stretch overflow-hidden">
               <div className={`transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${selectedEquipment ? 'w-[calc(100%-520px)]' : 'w-full'} flex-1 min-w-0`}>
