@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   MdClose, MdArrowUpward, MdOutlineLightbulb,
-  MdOutlineSettings, MdPeopleOutline, MdCheck
+  MdOutlineSettings, MdPeopleOutline, MdCheck, MdRefresh, MdEdit
 } from 'react-icons/md';
 import { FiLayout, FiSidebar, FiMaximize, FiCopy } from 'react-icons/fi';
 import { askAI } from "../services/chatService";
@@ -19,6 +19,13 @@ const AIAssistantWidget = ({ isOpen, setIsOpen, viewMode, setViewMode, provider 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const handleCopy = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
   const messagesEndRef = useRef(null);
   const layoutMenuRef = useRef(null);
@@ -177,6 +184,7 @@ if (!sessionId) {
   const userMessage = {
     role: "user",
     text: promptText,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
 
   setMessages((prev) => [...prev, userMessage]);
@@ -195,6 +203,7 @@ if (!sessionId) {
       text:
         response?.data?.message ||
         "No response received from AI.",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages((prev) => [...prev, aiMessage]);
@@ -206,6 +215,7 @@ if (!sessionId) {
       {
         role: "model",
         text: "Failed to get response from server.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       },
     ]);
   } finally {
@@ -221,9 +231,9 @@ if (!sessionId) {
   };
 
   const suggestions = [
-    { text: "Show overdue M2 notifications", icon: <MdOutlineLightbulb className="text-amber-500" size={18} /> },
-    { text: "Which units have the most issues?", icon: <MdOutlineSettings className="text-indigo-400" size={18} /> },
-    { text: "Summarize static equipment alerts", icon: <MdPeopleOutline className="text-emerald-500" size={18} /> }
+    { text: "Give me a summary of overdue notifications", icon: <MdOutlineLightbulb className="text-amber-500" size={18} /> },
+    { text: "Which specific equipment has the most issues?", icon: <MdOutlineSettings className="text-[#003865]" size={18} /> },
+    { text: "Give me a breakdown of notification priorities", icon: <MdPeopleOutline className="text-emerald-500" size={18} /> }
   ];
 
   const renderChart = (chartConfig) => {
@@ -313,14 +323,14 @@ if (!sessionId) {
       {isOpen && (
         <div className={`bg-white flex flex-col border border-slate-200 ${getContainerStyles()}`}>
 
-          <div className="relative z-20 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-100 text-slate-800 px-4 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center shrink-0 shadow-sm">
+          <div className="relative z-20 bg-[#003865] border-b border-[#002244] text-white px-4 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center shrink-0 shadow-sm">
             <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-[#4F46E5] rounded-md">
-                <BsStars size={18} className="text-white" />
+              <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-[#ffc000] rounded-md">
+                <BsStars size={18} className="text-[#003865]" />
               </div>
               <div>
-                <h3 className="font-black text-base sm:text-lg leading-none tracking-tight text-slate-900">Notifications AI</h3>
-                <p className="text-slate-500 text-[10px] font-medium mt-1">Your analytics copilot</p>
+                <h3 className="font-black text-base sm:text-lg leading-none tracking-tight text-white">Notifications AI</h3>
+                <p className="text-slate-300 text-[10px] font-medium mt-1">Your analytics copilot</p>
               </div>
             </div>
 
@@ -329,7 +339,7 @@ if (!sessionId) {
               <div className="relative" ref={layoutMenuRef}>
                 <button
                   onClick={() => setShowLayoutMenu(!showLayoutMenu)}
-                  className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
+                  className="text-slate-300 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
                 >
                   <FiLayout size={18} />
                 </button>
@@ -339,23 +349,23 @@ if (!sessionId) {
                     <div className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Switch to</div>
 
                     <button onClick={() => { setViewMode('modal'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiLayout className={viewMode === 'modal' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'modal' ? "text-indigo-600 font-bold" : "text-slate-600"}>Modal</span></div>
-                      {viewMode === 'modal' && <MdCheck className="text-indigo-600" />}
+                      <div className="flex items-center space-x-3"><FiLayout className={viewMode === 'modal' ? "text-[#003865]" : "text-slate-400"} /> <span className={viewMode === 'modal' ? "text-[#003865] font-bold" : "text-slate-600"}>Modal</span></div>
+                      {viewMode === 'modal' && <MdCheck className="text-[#003865]" />}
                     </button>
 
                     <button onClick={() => { setViewMode('floating'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><BsWindowDesktop className={viewMode === 'floating' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'floating' ? "text-indigo-600 font-bold" : "text-slate-600"}>Floating</span></div>
-                      {viewMode === 'floating' && <MdCheck className="text-indigo-600" />}
+                      <div className="flex items-center space-x-3"><BsWindowDesktop className={viewMode === 'floating' ? "text-[#003865]" : "text-slate-400"} /> <span className={viewMode === 'floating' ? "text-[#003865] font-bold" : "text-slate-600"}>Floating</span></div>
+                      {viewMode === 'floating' && <MdCheck className="text-[#003865]" />}
                     </button>
 
                     <button onClick={() => { setViewMode('sidebar'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiSidebar className={viewMode === 'sidebar' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'sidebar' ? "text-indigo-600 font-bold" : "text-slate-600"}>Sidebar</span></div>
-                      {viewMode === 'sidebar' && <MdCheck className="text-indigo-600" />}
+                      <div className="flex items-center space-x-3"><FiSidebar className={viewMode === 'sidebar' ? "text-[#003865]" : "text-slate-400"} /> <span className={viewMode === 'sidebar' ? "text-[#003865] font-bold" : "text-slate-600"}>Sidebar</span></div>
+                      {viewMode === 'sidebar' && <MdCheck className="text-[#003865]" />}
                     </button>
 
                     <button onClick={() => { setViewMode('fullscreen'); setShowLayoutMenu(false); }} className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 text-sm">
-                      <div className="flex items-center space-x-3"><FiMaximize className={viewMode === 'fullscreen' ? "text-indigo-600" : "text-slate-400"} /> <span className={viewMode === 'fullscreen' ? "text-indigo-600 font-bold" : "text-slate-600"}>Full screen</span></div>
-                      {viewMode === 'fullscreen' && <MdCheck className="text-indigo-600" />}
+                      <div className="flex items-center space-x-3"><FiMaximize className={viewMode === 'fullscreen' ? "text-[#003865]" : "text-slate-400"} /> <span className={viewMode === 'fullscreen' ? "text-[#003865] font-bold" : "text-slate-600"}>Full screen</span></div>
+                      {viewMode === 'fullscreen' && <MdCheck className="text-[#003865]" />}
                     </button>
                   </div>
                 )}
@@ -363,7 +373,7 @@ if (!sessionId) {
 
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-colors"
+                className="text-slate-300 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-colors"
               >
                 <MdClose size={20} />
               </button>
@@ -375,7 +385,7 @@ if (!sessionId) {
 
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-                <div className="bg-indigo-100 text-indigo-600 p-4 rounded-3xl mb-6 shadow-sm border border-indigo-200">
+                <div className="bg-[#ffc000]/20 text-[#003865] p-4 rounded-3xl mb-6 shadow-sm border border-[#ffc000]/30">
                   <BsStars size={32} />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Good Afternoon!</h2>
@@ -389,7 +399,7 @@ if (!sessionId) {
                     <button
                       key={idx}
                       onClick={() => handleSend(sug.text)}
-                      className="flex items-center space-x-2 bg-white text-slate-700 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all px-4 py-2.5 rounded-2xl text-sm font-bold shadow-sm"
+                      className="flex items-center space-x-2 bg-white text-slate-700 border border-slate-200 hover:bg-[#003865]/5 hover:border-[#003865]/20 hover:text-[#003865] transition-all px-4 py-2.5 rounded-2xl text-sm font-bold shadow-sm"
                     >
                       {sug.icon}
                       <span>{sug.text}</span>
@@ -401,42 +411,56 @@ if (!sessionId) {
               /* Chat Messages */
               <div className="flex-1 p-6 flex flex-col space-y-6">
                 {messages.map((msg, index) => (
-                  <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${msg.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-br-sm'
+                      ? 'bg-[#003865] text-white rounded-br-sm'
                       : 'bg-white text-slate-800 border border-slate-200 rounded-bl-sm'
                       }`}>
-                      {msg.role === 'model' && (
-                        <div className="flex items-center space-x-2 mb-2 text-indigo-600">
-                          <BsStars size={16} />
-                          <span className="font-bold text-xs uppercase tracking-wider">Copilot</span>
-                        </div>
-                      )}
                       <div className="leading-relaxed font-medium">
                         {msg.text ? renderMessageContent(msg.text) : (
                           <div className="flex items-center space-x-2 py-2">
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                           </div>
                         )}
                       </div>
                     </div>
+                    
+                    {msg.text && (
+                      <div className={`mt-1.5 flex items-center space-x-3 px-2 text-slate-400`}>
+                        {msg.timestamp && (
+                          <span className="text-[12px] font-medium text-slate-400 mr-1">{msg.timestamp}</span>
+                        )}
+                        <div className="relative flex items-center">
+                          <button onClick={() => handleCopy(msg.text, index)} className="hover:text-[#003865] transition-colors" title="Copy">
+                            {copiedIndex === index ? <MdCheck size={16} className="text-emerald-500" /> : <FiCopy size={16} />}
+                          </button>
+                          {copiedIndex === index && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] font-bold rounded shadow-lg whitespace-nowrap z-50 animate-fade-in">
+                              Copied to clipboard
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
+                          )}
+                        </div>
+                        {msg.role === 'user' && (
+                          <button onClick={() => { setInput(msg.text); document.querySelector('input[placeholder="Ask about notifications, units, or equipment..."]')?.focus(); }} className="hover:text-[#003865] transition-colors" title="Edit">
+                            <MdEdit size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="max-w-[85%] p-4 rounded-3xl text-sm shadow-sm bg-white text-slate-800 border border-slate-200 rounded-bl-sm">
-                      <div className="flex items-center space-x-2 mb-2 text-indigo-600">
-                        <BsStars size={16} />
-                        <span className="font-bold text-xs uppercase tracking-wider">Copilot</span>
-                      </div>
                       <div className="leading-relaxed font-medium">
                         <div className="flex items-center space-x-2 py-2">
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-[#ffc000] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                         </div>
                       </div>
                     </div>
@@ -448,7 +472,7 @@ if (!sessionId) {
           </div>
 
           <div className="p-4 bg-white border-t border-slate-200 shrink-0">
-            <div className="relative flex items-center border border-slate-300 rounded-3xl bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all px-4 py-2 mx-auto max-w-3xl">
+            <div className="relative flex items-center border border-slate-300 rounded-3xl bg-white focus-within:border-[#ffc000] focus-within:ring-2 focus-within:ring-[#ffc000]/20 transition-all px-4 py-2 mx-auto max-w-3xl">
               <input
                 type="text"
                 value={input}
@@ -462,7 +486,7 @@ if (!sessionId) {
                 onClick={() => handleSend(input)}
                 disabled={isLoading || !input.trim()}
                 className={`ml-2 p-2 rounded-xl transition-colors cursor-pointer flex shrink-0 ${input.trim()
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
+                  ? 'bg-[#ffc000] text-[#003865] hover:bg-yellow-400 shadow-md shadow-[#ffc000]/20'
                   : 'text-slate-300'
                   }`}
               >
