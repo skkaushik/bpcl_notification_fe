@@ -19,9 +19,9 @@ const TopEquipmentList = ({ data = [], onEquipmentClick, onViewAllClick }) => {
         </h3>
         <button 
           onClick={onViewAllClick}
-          className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors cursor-pointer"
+          className="text-[13px] font-bold text-[#ffc000] hover:text-[#003865] flex items-center gap-1 transition-colors cursor-pointer"
         >
-          View All
+          More
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
           </svg>
