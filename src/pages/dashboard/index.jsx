@@ -231,10 +231,14 @@ const Dashboard = () => {
               passDate = notifDate >= start && notifDate <= end;
             }
             if (Number(ageFilter) > 0) {
-              const thresholdDate = new Date();
-              thresholdDate.setDate(thresholdDate.getDate() - Number(ageFilter));
-              thresholdDate.setHours(0, 0, 0, 0);
-              passAge = notifDate >= thresholdDate;
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const notificationDate = new Date(notifDate);
+              notificationDate.setHours(0, 0, 0, 0);
+              const diffDays = Math.floor(
+                (today - notificationDate) / (1000 * 60 * 60 * 24)
+              ) + 1;
+              passAge = diffDays >= Number(ageFilter);
             }
           } else {
             passDate = false;
@@ -356,7 +360,18 @@ const Dashboard = () => {
       );
     });
   }, [criticalEquipmentData, searchQuery]);
+const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const displayedCriticalEquipmentData = useMemo(() => {
+    if (!selectedEquipment) {
+      return filteredCriticalEquipmentData;
+    }
 
+    return filteredCriticalEquipmentData.filter(
+      (row) =>
+        String(row.displayEquipId) ===
+        String(selectedEquipment.displayEquipId)
+    );
+  }, [filteredCriticalEquipmentData, selectedEquipment]);
 
   const [stats, setStats] = useState({
     totalNotifications: '0',
@@ -366,7 +381,6 @@ const Dashboard = () => {
     overdue: '0',
     impactedUnits: '0',
   });
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const prevRawSignature = useRef('');
   useEffect(() => {
 
@@ -1003,11 +1017,21 @@ const Dashboard = () => {
                 />
               </div>
               <div className="lg:col-span-1 min-w-0">
-                <TopEquipmentBarChart 
+                <TopEquipmentBarChart
                   data={filteredCriticalEquipmentData}
                   onEquipmentClick={(item) => {
-                    setSelectedEquipment(prev => prev && prev.displayEquipId === item.displayEquipId ? null : item);
-                    document.getElementById('critical-equipment-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setSelectedEquipment(prev =>
+                      prev?.displayEquipId === item.displayEquipId
+                        ? null
+                        : item
+                    );
+
+                    document
+                      .getElementById("critical-equipment-table-section")
+                      ?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
                   }}
                   onViewAllClick={() => {
                     document.getElementById('critical-equipment-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1015,7 +1039,7 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-              {/* <UnitWiseBarChart
+            {/* <UnitWiseBarChart
     title="Static Notification Unit Wise"
     prefix="MS"
     data={filteredRawData}
@@ -1050,24 +1074,24 @@ const Dashboard = () => {
     prefix="MC"
     data={filteredRawData}
   /> */}
-              {/* <UnitWiseBarChart
+            {/* <UnitWiseBarChart
                 title="Notification Unit Wise"
                 data={filteredRawData}
                 selectedDepartments={activeDeptFilter}
               /> */}
-                <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
-  <div className="min-w-0">
-    <UnitWiseBarChart
-      title="Notification Unit Wise"
-      data={filteredRawData}
-      selectedDepartments={activeDeptFilter}
-    />
-  </div>
+            <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <div className="min-w-0">
+                <UnitWiseBarChart
+                  title="Notification Unit Wise"
+                  data={filteredRawData}
+                  selectedDepartments={activeDeptFilter}
+                />
+              </div>
 
-  <div className="min-w-0">
-    <TotalDueNotificationsChart data={dueChartData} />
-  </div>
-</div>
+              <div className="min-w-0">
+                <TotalDueNotificationsChart data={dueChartData} />
+              </div>
+            </div>
 
 
 
@@ -1076,7 +1100,7 @@ const Dashboard = () => {
                 <CriticalEquipmentTable
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
-                  filteredCriticalEquipmentData={filteredCriticalEquipmentData}
+                  filteredCriticalEquipmentData={displayedCriticalEquipmentData}
                   selectedEquipment={selectedEquipment}
                   setSelectedEquipment={setSelectedEquipment}
                 />

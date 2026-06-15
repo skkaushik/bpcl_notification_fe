@@ -53,6 +53,19 @@ const CriticalEquipmentTable = ({
       ),
     },
   ];
+  const conditionalRowStyles = [
+  {
+    when: row =>
+      selectedEquipment &&
+      row.displayEquipId === selectedEquipment.displayEquipId,
+
+    style: {
+      backgroundColor: '#EEF2FF',
+      borderLeft: '4px solid #4F46E5',
+      fontWeight: 600,
+    },
+  },
+];
 
   return (
     <div className="flex-1 min-w-0 w-full bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] p-[16px] shadow-sm overflow-hidden transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
@@ -79,6 +92,7 @@ const CriticalEquipmentTable = ({
         <DataTable
           columns={criticalEquipmentColumns}
           data={filteredCriticalEquipmentData}
+           conditionalRowStyles={conditionalRowStyles}
           onRowClicked={(row) => setSelectedEquipment(prev => prev && prev.displayEquipId === row.displayEquipId ? null : row)}
           pointerOnHover
           pagination
