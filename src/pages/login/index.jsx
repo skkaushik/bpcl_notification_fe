@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { MdOutlineMailLock, MdOutlineVpnKey, MdAnalytics } from "react-icons/md";
 import { loginApi } from "../../services/loginService";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
@@ -25,49 +27,49 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
- const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  if (!validateForm()) {
-    return;
-  }
+    if (!validateForm()) {
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await loginApi(email, password);
+      const response = await loginApi(email, password);
 
-    if (response.success) {
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email,
-          loginTime: new Date().toISOString(),
-          isLoggedIn: true,
-        })
+      if (response.success) {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            email,
+            loginTime: new Date().toISOString(),
+            isLoggedIn: true,
+          })
+        );
+
+        toast.success("Login successful!", {
+          position: "top-center",
+          autoClose: 2000,
+        });
+
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.detail || "Invalid email or password",
+        {
+          position: "top-center",
+          autoClose: 2000,
+        }
       );
 
-      toast.success("Login successful!", {
-        position: "top-center",
-        autoClose: 2000,
-      });
-
-      navigate("/dashboard");
+      setPassword("");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    toast.error(
-      error?.response?.data?.detail || "Invalid email or password",
-      {
-        position: "top-center",
-        autoClose: 2000,
-      }
-    );
-
-    setPassword("");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   return (
@@ -104,11 +106,10 @@ export default function LoginPage() {
                     setEmail(e.target.value);
                     if (errors.email) setErrors({ ...errors, email: "" });
                   }}
-                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none ${
-                    errors.email
+                  className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-all bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none ${errors.email
                       ? "border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
                       : "border-slate-200 focus:border-[#ffc000] focus:ring-2 focus:ring-[#ffc000]/20"
-                  }`}
+                    }`}
                 />
               </div>
               {errors.email && (
@@ -123,7 +124,7 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <MdOutlineVpnKey className="absolute left-4 top-3.5 text-slate-400 text-xl" />
-                <input
+                {/* <input
                   type="password"
                   placeholder="Enter your password"
                   value={password}
@@ -136,7 +137,37 @@ export default function LoginPage() {
                       ? "border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
                       : "border-slate-200 focus:border-[#ffc000] focus:ring-2 focus:ring-[#ffc000]/20"
                   }`}
-                />
+                /> */}
+                <div className="relative">
+                  <MdOutlineVpnKey className="absolute left-4 top-3.5 text-slate-400 text-xl" />
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password)
+                        setErrors({ ...errors, password: "" });
+                    }}
+                    className={`w-full pl-12 pr-12 py-3 rounded-lg border-2 transition-all bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none ${errors.password
+                        ? "border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                        : "border-slate-200 focus:border-[#ffc000] focus:ring-2 focus:ring-[#ffc000]/20"
+                      }`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#003865] transition-colors cursor-pointer"
+                  >
+                    {showPassword ? (
+                      <MdVisibilityOff size={22} />
+                    ) : (
+                      <MdVisibility size={22} />
+                    )}
+                  </button>
+                </div>
               </div>
               {errors.password && (
                 <p className="text-red-400 text-xs">{errors.password}</p>
