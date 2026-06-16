@@ -1,6 +1,6 @@
 import React from 'react';
 
-const NotificationDetailsModal = ({ selectedNotification, setSelectedNotification, handleSendEmail }) => {
+const NotificationDetailsModal = ({ selectedNotification, setSelectedNotification }) => {
   if (!selectedNotification) return null;
 
   return (
@@ -82,13 +82,7 @@ const NotificationDetailsModal = ({ selectedNotification, setSelectedNotificatio
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
-          <button
-            onClick={() => handleSendEmail(selectedNotification)}
-            className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            Send Email
-          </button>
+
           <button
             onClick={() => setSelectedNotification(null)}
             className="rounded-2xl bg-slate-200 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-300"

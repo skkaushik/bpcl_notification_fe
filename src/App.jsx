@@ -44,13 +44,13 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  }
-/>
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
       <AIAssistantWidget
         isOpen={isAIOpen}

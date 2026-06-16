@@ -12,11 +12,11 @@ import CriticalEquipmentTable from "../../components/CriticalEquipmentTable";
 import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import TopEquipmentBarChart from "../../components/TopEquipmentBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
-import { emailConfig } from "../../data/emailConfig";
+import { toast } from "react-toastify";
+import { sendEmailsApi } from "../../services/emailService";
 import {
   findKey,
   formatExcelDate,
@@ -360,7 +360,7 @@ const Dashboard = () => {
       );
     });
   }, [criticalEquipmentData, searchQuery]);
-const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const displayedCriticalEquipmentData = useMemo(() => {
     if (!selectedEquipment) {
       return filteredCriticalEquipmentData;
@@ -415,86 +415,32 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
 
 
 
-  const handleSendEmail = async (notification) => {
-    if (!notification) return;
-    const type = String(notification.type ?? '').trim().toUpperCase();
-    const rawUnit = String(notification.workCtr ?? '').trim().toUpperCase();
-    const status = String(notification.status ?? '').trim().toUpperCase();
+  const handleSendEmails = async () => {
+    try {
+      const payload = {
+        ageFilter: Number(ageFilter) ?? 0,
+        unitFilter: activeUnitFilter,
+        typeFilter: activeTypeFilter.map(t => t.value),
+        deptFilter: activeDeptFilter,
+        userStatusFilter: activeUserStatusFilter,
+        systemStatusFilter: activeSystemStatusFilter,
+        startDate: startDateFilter ? startDateFilter.toISOString().split('T')[0] : null,
+        endDate: endDateFilter ? endDateFilter.toISOString().split('T')[0] : null
+      };
 
-    let prefix = '';
-    let plantName = rawUnit;
-
-    if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
-      prefix = rawUnit.substring(0, 2);
-      plantName = rawUnit.substring(2).trim();
-    }
-
-    const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
-    let targetEmail = '';
-
-    if (plantConfig) {
-      const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-      const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO') || status.includes('JBPR');
-
-      if (isProcessType && isProcessStatus) {
-        targetEmail = plantConfig.processEmail;
-      } else if (prefix === 'MR') {
-        targetEmail = plantConfig.rotaryMail;
-      } else if (prefix === 'MS') {
-        targetEmail = plantConfig.staticMail;
+      const data = await sendEmailsApi(payload);
+      if (data.success) {
+        toast.success(data.message || "Email(s) successfully processed by backend.", { position: "top-center", autoClose: 2000 });
       } else {
-
-        targetEmail = plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
+        toast.error("Error sending email(s): " + data.message, { position: "top-center", autoClose: 2000 });
       }
-    }
-    if (targetEmail) {
-      const selectedAge = Number(ageFilter) > 0 ? Number(ageFilter) : 1;
-      const ageLabel = selectedAge === 1 ? 'day' : 'days';
-
-      let daysPending = '0';
-      if (notification.notifDate && notification.notifDate !== 'N/A') {
-        const notifD = new Date(notification.notifDate);
-        if (!isNaN(notifD)) {
-          const diffTime = Math.abs(new Date() - notifD);
-          daysPending = Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
-        }
-      }
-
-      let rawDesc = (notification.description || '').replace(/\r?\n|\r/g, " ");
-      let desc = rawDesc.length > 27 ? rawDesc.substring(0, 27) + '...' : rawDesc;
-      let dateStr = notification.notifDate !== 'N/A' ? notification.notifDate : '';
-
-      const pad = (str, len) => String(str || '').padEnd(len, ' ').substring(0, len);
-      const sep = '-'.repeat(130);
-      const headerRow = `${pad('Plant Name', 15)}${pad('Notification No', 18)}${pad('Notification Date', 20)}${pad('Type', 14)}${pad('Description', 30)}${pad('Days', 7)}${pad('User Status', 13)}${pad('System Status', 13)}`;
-      const dataRow = `${pad(notification.workCtr, 15)}${pad(notification.id, 18)}${pad(dateStr, 20)}${pad(notification.type, 14)}${pad(desc, 30)}${pad(daysPending, 7)}${pad(notification.status, 13)}${pad(notification.sysStatus, 13)}`;
-
-      let bodyStr = `Dear Sir,\n\n`;
-      bodyStr += `Please find below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
-      bodyStr += `${sep}\n`;
-      bodyStr += `${headerRow}\n`;
-      bodyStr += `${sep}\n`;
-      bodyStr += `${dataRow}\n`;
-      bodyStr += `${sep}\n\n`;
-      bodyStr += `Kindly take necessary action.\n\n`;
-      bodyStr += `Regards,\nMechanical Maintenance Team`;
-
-      const subject = encodeURIComponent(
-        `Pending Notifications - ${plantName} (Last ${selectedAge} ${ageLabel})`
-      );
-
-      const body = encodeURIComponent(bodyStr);
-
-      window.open(
-        `mailto:${targetEmail}?subject=${subject}&body=${body}`,
-        '_blank'
-      );
-    } else {
-      alert(
-        `No email configuration found for plant: ${plantName} with prefix ${prefix}`
-      );
+    } catch (error) {
+      console.error("Failed to send email API request:", error);
+      const errorMessage = error?.response?.data?.detail || "Failed to send email API request.";
+      toast.error(errorMessage, { position: "top-center", autoClose: 2000 });
     }
   };
+
 
   const processUploadedFile = async () => {
     if (!selectedFile) return;
@@ -631,126 +577,6 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
     }
   };
 
-  const handleSendGroupEmail = () => {
-    const sample = rawData[0] || {};
-    const idKey = findKey(sample, ["Notification", "Notification No", "Notifictn"]);
-
-    const validIds = new Set(filteredRawData.map(row => String(row[idKey]).trim()));
-
-    const emailFilteredNotifications = notifications.filter(n => {
-      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
-      const isMRMS = rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
-      return isMRMS && validIds.has(n.id);
-    });
-
-    if (emailFilteredNotifications.length === 0) {
-      alert("There are 0 matching notifications. Please upload an Excel file first or adjust filters.");
-      return;
-    }
-
-    const emailGroups = {};
-    emailFilteredNotifications.forEach(notif => {
-      const type = String(notif.type ?? '').trim().toUpperCase();
-      const rawUnit = String(notif.workCtr ?? '').trim().toUpperCase();
-      const status = String(notif.status ?? '').trim().toUpperCase();
-      let prefix = ''; let plantName = rawUnit;
-      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
-        prefix = rawUnit.substring(0, 2);
-        plantName = rawUnit.substring(2).trim();
-      }
-      const plantConfig = emailConfig.find(p => p.plantName.toUpperCase() === plantName);
-      if (plantConfig) {
-        const isProcessType = ['M1', 'M2', 'M6'].includes(type);
-        const isProcessStatus = status === 'PENDING' || status.includes('APRE') || status.includes('JBCO') || status.includes('JBPR');
-        const targetEmail = isProcessType && isProcessStatus
-          ? plantConfig.processEmail
-          : prefix === 'MR'
-            ? plantConfig.rotaryMail
-            : prefix === 'MS'
-              ? plantConfig.staticMail
-              : plantConfig.processEmail || plantConfig.rotaryMail || plantConfig.staticMail;
-
-        if (targetEmail) {
-          if (!emailGroups[targetEmail]) emailGroups[targetEmail] = [];
-          emailGroups[targetEmail].push(notif);
-        }
-      }
-    });
-
-    const targetEmails = Object.keys(emailGroups);
-    if (targetEmails.length === 0) {
-      alert("No matching emails found for current data.");
-      return;
-    }
-
-    const selectedAge = Number(ageFilter) > 0 ? Number(ageFilter) : 1;
-    const ageLabel = selectedAge === 1 ? 'day' : 'days';
-
-    const emailsToOpen = [];
-
-    Object.entries(emailGroups).forEach(([email, notifs]) => {
-      let rawUnit = String(notifs[0]?.workCtr ?? '').trim().toUpperCase();
-      let plantName = rawUnit;
-      if (rawUnit.startsWith('MR') || rawUnit.startsWith('MS')) {
-        plantName = rawUnit.substring(2).trim();
-      }
-
-      const subject = `Pending Notifications - ${plantName} (Last ${selectedAge} ${ageLabel})`;
-
-      const pad = (str, len) => String(str || '').padEnd(len, ' ').substring(0, len);
-      const sep = '-'.repeat(130);
-      const headerRow = `${pad('Plant Name', 15)}${pad('Notification No', 18)}${pad('Notification Date', 20)}${pad('Type', 14)}${pad('Description', 30)}${pad('Days', 7)}${pad('User Status', 13)}${pad('System Status', 13)}`;
-
-      let bodyStr = `Dear Sir,\n\n`;
-      bodyStr += `Please find below the notifications pending for the last ${selectedAge} ${ageLabel}:\n\n`;
-      bodyStr += `${sep}\n`;
-      bodyStr += `${headerRow}\n`;
-      bodyStr += `${sep}\n`;
-
-      notifs.forEach((n) => {
-        let daysPending = '0';
-        if (n.notifDate && n.notifDate !== 'N/A') {
-          const notifD = new Date(n.notifDate);
-          if (!isNaN(notifD)) {
-            const diffTime = Math.abs(new Date() - notifD);
-            daysPending = Math.ceil(diffTime / (1000 * 60 * 60 * 24)).toString();
-          }
-        }
-
-        let rawDesc = (n.description || '').replace(/\r?\n|\r/g, " ");
-        let desc = rawDesc.length > 27 ? rawDesc.substring(0, 27) + '...' : rawDesc;
-        let dateStr = n.notifDate !== 'N/A' ? n.notifDate : '';
-
-        bodyStr += `${pad(n.workCtr, 15)}${pad(n.id, 18)}${pad(dateStr, 20)}${pad(n.type, 14)}${pad(desc, 30)}${pad(daysPending, 7)}${pad(n.status, 13)}${pad(n.sysStatus, 13)}\n`;
-      });
-
-      bodyStr += `${sep}\n\n`;
-      bodyStr += `Kindly take necessary action.\n\n`;
-      bodyStr += `Regards,\nMechanical Maintenance Team`;
-
-      const encodedSubject = encodeURIComponent(subject);
-      const encodedBody = encodeURIComponent(bodyStr);
-
-      const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`;
-
-      emailsToOpen.push({
-        url: mailtoUrl,
-        recipient: email
-      });
-    });
-
-    let delayTime = 0;
-    emailsToOpen.forEach((emailObj) => {
-      setTimeout(() => {
-        try {
-          window.open(emailObj.url, '_blank');
-        } catch (error) {
-          console.error(`Error opening mailto for ${emailObj.recipient}:`, error);
-        }
-      }, delayTime);
-      delayTime += 800;
-    });
-  };
   return (
     <Layout
       hasData={rawData.length > 0}
@@ -759,7 +585,7 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
       ageFilter={ageFilter}
       setAgeFilter={setAgeFilter}
       onUploadClick={() => setShowUploadDialog(true)}
-      onSendEmailClick={handleSendGroupEmail}
+      onSendEmailClick={handleSendEmails}
     >
       <div className="px-4 py-1">
         <ProcessingOverlay uploadLoading={uploadLoading} processingPercent={processingPercent} />
@@ -1120,7 +946,6 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
         <NotificationDetailsModal
           selectedNotification={selectedNotification}
           setSelectedNotification={setSelectedNotification}
-          handleSendEmail={handleSendEmail}
         />
 
 
