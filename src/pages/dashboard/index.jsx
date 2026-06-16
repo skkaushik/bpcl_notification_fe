@@ -16,6 +16,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { toast } from "react-toastify";
+import { sendEmailsApi } from "../../services/emailService";
 import {
   findKey,
   formatExcelDate,
@@ -427,12 +428,7 @@ const Dashboard = () => {
         endDate: endDateFilter ? endDateFilter.toISOString().split('T')[0] : null
       };
 
-      const response = await fetch("http://localhost:8000/api/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await response.json();
+      const data = await sendEmailsApi(payload);
       if (data.success) {
         toast.success(data.message || "Email(s) successfully processed by backend.", { position: "top-center", autoClose: 2000 });
       } else {
@@ -440,7 +436,8 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Failed to send email API request:", error);
-      toast.error("Failed to send email API request.", { position: "top-center", autoClose: 2000 });
+      const errorMessage = error?.response?.data?.detail || "Failed to send email API request.";
+      toast.error(errorMessage, { position: "top-center", autoClose: 2000 });
     }
   };
 
