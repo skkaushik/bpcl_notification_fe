@@ -12,11 +12,10 @@ import CriticalEquipmentTable from "../../components/CriticalEquipmentTable";
 import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import TopEquipmentBarChart from "../../components/TopEquipmentBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
-import { emailConfig } from "../../data/emailConfig";
+import { toast } from "react-toastify";
 import {
   findKey,
   formatExcelDate,
@@ -360,7 +359,7 @@ const Dashboard = () => {
       );
     });
   }, [criticalEquipmentData, searchQuery]);
-const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const displayedCriticalEquipmentData = useMemo(() => {
     if (!selectedEquipment) {
       return filteredCriticalEquipmentData;
@@ -415,39 +414,36 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
 
 
 
-  const handleSendEmail = async (notification) => {
-    if (!notification) return;
-    
+  const handleSendEmails = async () => {
     try {
+      const payload = {
+        ageFilter: Number(ageFilter) ?? 0,
+        unitFilter: activeUnitFilter,
+        typeFilter: activeTypeFilter.map(t => t.value),
+        deptFilter: activeDeptFilter,
+        userStatusFilter: activeUserStatusFilter,
+        systemStatusFilter: activeSystemStatusFilter,
+        startDate: startDateFilter ? startDateFilter.toISOString().split('T')[0] : null,
+        endDate: endDateFilter ? endDateFilter.toISOString().split('T')[0] : null
+      };
+
       const response = await fetch("http://localhost:8000/api/email/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ageFilter: Number(ageFilter) || 1,
-          notifications: [
-            {
-              id: notification.id,
-              workCtr: notification.workCtr,
-              type: notification.type,
-              status: notification.status,
-              sysStatus: notification.sysStatus,
-              description: notification.description,
-              notifDate: notification.notifDate
-            }
-          ]
-        })
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (data.success) {
-        alert(data.message || "Email successfully processed by backend.");
+        toast.success(data.message || "Email(s) successfully processed by backend.", { position: "top-center", autoClose: 2000 });
       } else {
-        alert("Error sending email: " + data.message);
+        toast.error("Error sending email(s): " + data.message, { position: "top-center", autoClose: 2000 });
       }
     } catch (error) {
       console.error("Failed to send email API request:", error);
-      alert("Failed to send email API request.");
+      toast.error("Failed to send email API request.", { position: "top-center", autoClose: 2000 });
     }
   };
+
 
   const processUploadedFile = async () => {
     if (!selectedFile) return;
@@ -584,54 +580,6 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
     }
   };
 
-  const handleSendGroupEmail = async () => {
-    const sample = rawData[0] || {};
-    const idKey = findKey(sample, ["Notification", "Notification No", "Notifictn"]);
-
-    const validIds = new Set(filteredRawData.map(row => String(row[idKey]).trim()));
-
-    const emailFilteredNotifications = notifications.filter(n => {
-      const rawUnit = String(n.workCtr ?? '').trim().toUpperCase();
-      const isMRMS = rawUnit.startsWith('MR') || rawUnit.startsWith('MS');
-      return isMRMS && validIds.has(n.id);
-    });
-
-    if (emailFilteredNotifications.length === 0) {
-      alert("There are 0 matching notifications. Please upload an Excel file first or adjust filters.");
-      return;
-    }
-
-    try {
-      const payload = {
-        ageFilter: Number(ageFilter) || 1,
-        notifications: emailFilteredNotifications.map(n => ({
-          id: n.id,
-          workCtr: n.workCtr,
-          type: n.type,
-          status: n.status,
-          sysStatus: n.sysStatus,
-          description: n.description,
-          notifDate: n.notifDate
-        }))
-      };
-
-      const response = await fetch("http://localhost:8000/api/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert(data.message || "Group emails successfully processed by backend.");
-      } else {
-        alert("Error sending group emails: " + data.message);
-      }
-    } catch (error) {
-      console.error("Failed to send group email API request:", error);
-      alert("Failed to send group email API request.");
-    }
-  };
   return (
     <Layout
       hasData={rawData.length > 0}
@@ -640,7 +588,7 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
       ageFilter={ageFilter}
       setAgeFilter={setAgeFilter}
       onUploadClick={() => setShowUploadDialog(true)}
-      onSendEmailClick={handleSendGroupEmail}
+      onSendEmailClick={handleSendEmails}
     >
       <div className="px-4 py-1">
         <ProcessingOverlay uploadLoading={uploadLoading} processingPercent={processingPercent} />
@@ -1001,7 +949,6 @@ const [selectedEquipment, setSelectedEquipment] = useState(null);
         <NotificationDetailsModal
           selectedNotification={selectedNotification}
           setSelectedNotification={setSelectedNotification}
-          handleSendEmail={handleSendEmail}
         />
 
 
