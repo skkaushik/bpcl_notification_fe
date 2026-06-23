@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { MdOutlineMailLock, MdOutlineVpnKey, MdAnalytics } from "react-icons/md";
+import { MdOutlineMailLock, MdOutlineVpnKey, MdAnalytics, MdVisibilityOff, MdVisibility } from "react-icons/md";
 // import { loginApi } from "../../services/loginService";
 
 export default function LoginPage() {
@@ -65,7 +65,7 @@ export default function LoginPage() {
 
   navigate("/dashboard");
 } catch (error) {
-  toast.error("Something went wrong");
+  toast.error("Something went wrong",error);
 } finally {
   setLoading(false);
 }
