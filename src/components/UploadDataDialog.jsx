@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from "react";
-import { uploadFileApi } from "../services/uploadService";
+import { useRef, useState, useEffect } from "react";
+// import { uploadFileApi } from "../services/uploadService";
 
 const UploadDataDialog = ({
   isOpen,
@@ -13,7 +13,7 @@ const UploadDataDialog = ({
 const [isUploading, setIsUploading] = useState(false);
 useEffect(() => {
   if (!isOpen) {
-    setIsUploading(false);
+    // setIsUploading(false);
   }
 }, [isOpen]);
   if (!isOpen) return null;
@@ -68,22 +68,22 @@ const handleUploadToBackend = async () => {
       return;
     }
 
-    const response = await uploadFileApi(selectedFile);
+    // const response = await uploadFileApi(selectedFile);
 
-    console.log("UPLOAD RESPONSE:", response);
+    // console.log("UPLOAD RESPONSE:", response);
 
-    if (response.success) {
-      const sessionId = response.data.session_id;
+    // if (response.success) {
+    //   const sessionId = response.data.session_id;
 
-      localStorage.setItem(
-        "session_id",
-        sessionId
-      );
+    //   localStorage.setItem(
+    //     "session_id",
+    //     sessionId
+    //   );
 
       await processUploadedFile();
      setIsUploading(false);
       onClose();
-    }
+    // }
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
 
