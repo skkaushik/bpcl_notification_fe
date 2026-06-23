@@ -54,7 +54,7 @@ const Layout = ({ children, hasData, activeView, setActiveView, dateRange, setDa
         </main>
 
         {/* Floating Ask AI Button */}
-        <button
+        {/* <button
           onClick={() => setShowAIChat(true)}
           className={`absolute top-1/2 -translate-y-1/2 right-6 z-40 cursor-pointer group flex items-center justify-center p-[2px] rounded-full bg-gradient-to-r from-yellow-300 to-yellow-500 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-700 ease-in-out ${isAIVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12 pointer-events-none'
             }`}
@@ -63,7 +63,7 @@ const Layout = ({ children, hasData, activeView, setActiveView, dateRange, setDa
             <BsStars size={20} className="text-yellow-600 animate-pulse" />
             <span className="text-base font-bold text-slate-800">Ask AI</span>
           </div>
-        </button>
+        </button> */}
       </div>
     </div>
   );
