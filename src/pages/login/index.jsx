@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { MdOutlineMailLock, MdOutlineVpnKey, MdAnalytics } from "react-icons/md";
-import { loginApi } from "../../services/loginService";
-import { MdVisibility, MdVisibilityOff } from "react-icons/md";
+// import { loginApi } from "../../services/loginService";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -34,42 +33,43 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      setLoading(true);
+  try {
+  setLoading(true);
 
-      const response = await loginApi(email, password);
+  if (
+    email !== "admin@yopmail.com" ||
+    password !== "Admin@123"
+  ) {
+    toast.error("Invalid email or password", {
+      position: "top-center",
+      autoClose: 2000,
+    });
 
-      if (response.success) {
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            email,
-            loginTime: new Date().toISOString(),
-            isLoggedIn: true,
-          })
-        );
+    setPassword("");
+    return;
+  }
 
-        toast.success("Login successful!", {
-          position: "top-center",
-          autoClose: 2000,
-        });
+  localStorage.setItem(
+    "user",
+    JSON.stringify({
+      email,
+      loginTime: new Date().toISOString(),
+      isLoggedIn: true,
+    })
+  );
 
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.detail || "Invalid email or password",
-        {
-          position: "top-center",
-          autoClose: 2000,
-        }
-      );
+  toast.success("Login successful!", {
+    position: "top-center",
+    autoClose: 2000,
+  });
 
-      setPassword("");
-    } finally {
-      setLoading(false);
-    }
-  };
+  navigate("/dashboard");
+} catch (error) {
+  toast.error("Something went wrong");
+} finally {
+  setLoading(false);
+}
+};
 
 
   return (
