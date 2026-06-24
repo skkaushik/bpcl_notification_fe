@@ -12,11 +12,12 @@ import CriticalEquipmentTable from "../../components/CriticalEquipmentTable";
 import EquipmentDetailsDrawer from "../../components/EquipmentDetailsDrawer";
 import TopEquipmentBarChart from "../../components/TopEquipmentBarChart";
 import { useState, useRef, useEffect, useMemo } from "react";
+import { emailConfig } from "../../data/emailConfig";
 
 import * as XLSX from "xlsx";
 import { ALL_TYPES } from "../../components/NotificationTypeFilter";
 import { toast } from "react-toastify";
-import { sendEmailsApi } from "../../services/emailService";
+//import { sendEmailsApi } from "../../services/emailService";
 import {
   findKey,
   formatExcelDate,
@@ -415,30 +416,165 @@ const Dashboard = () => {
 
 
 
-  const handleSendEmails = async () => {
-    try {
-      const payload = {
-        ageFilter: Number(ageFilter) ?? 0,
-        unitFilter: activeUnitFilter,
-        typeFilter: activeTypeFilter.map(t => t.value),
-        deptFilter: activeDeptFilter,
-        userStatusFilter: activeUserStatusFilter,
-        systemStatusFilter: activeSystemStatusFilter,
-        startDate: startDateFilter ? startDateFilter.toISOString().split('T')[0] : null,
-        endDate: endDateFilter ? endDateFilter.toISOString().split('T')[0] : null
-      };
+  // const handleSendEmails = async () => {
+  //   try {
+  //     const payload = {
+  //       ageFilter: Number(ageFilter) ?? 0,
+  //       unitFilter: activeUnitFilter,
+  //       typeFilter: activeTypeFilter.map(t => t.value),
+  //       deptFilter: activeDeptFilter,
+  //       userStatusFilter: activeUserStatusFilter,
+  //       systemStatusFilter: activeSystemStatusFilter,
+  //       startDate: startDateFilter ? startDateFilter.toISOString().split('T')[0] : null,
+  //       endDate: endDateFilter ? endDateFilter.toISOString().split('T')[0] : null
+  //     };
 
-      const data = await sendEmailsApi(payload);
-      if (data.success) {
-        toast.success(data.message || "Email(s) successfully processed by backend.", { position: "top-center", autoClose: 2000 });
-      } else {
-        toast.error("Error sending email(s): " + data.message, { position: "top-center", autoClose: 2000 });
-      }
-    } catch (error) {
-      console.error("Failed to send email API request:", error);
-      const errorMessage = error?.response?.data?.detail || "Failed to send email API request.";
-      toast.error(errorMessage, { position: "top-center", autoClose: 2000 });
+  //     const data = await sendEmailsApi(payload);
+  //     if (data.success) {
+  //       toast.success(data.message || "Email(s) successfully processed by backend.", { position: "top-center", autoClose: 2000 });
+  //     } else {
+  //       toast.error("Error sending email(s): " + data.message, { position: "top-center", autoClose: 2000 });
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to send email API request:", error);
+  //     const errorMessage = error?.response?.data?.detail || "Failed to send email API request.";
+  //     toast.error(errorMessage, { position: "top-center", autoClose: 2000 });
+  //   }
+  // };
+
+  const handleSendEmails = () => {
+    console.log("SEND EMAIL CLICKED");
+    console.log("Rows:", filteredRawData.length);
+    console.log(filteredRawData);
+    if (!filteredRawData.length) {
+      toast.error("No data available");
+      return;
     }
+
+    const recipients = new Set();
+
+    filteredRawData.forEach((row) => {
+      const workCtrKey = findKey(row, ["Main WorkCtr", "MainWorkCtr"]);
+      if (!workCtrKey) return;
+
+      const workCtr = String(row[workCtrKey] || "")
+        .trim()
+        .toUpperCase();
+
+      const department = workCtr.substring(0, 2);
+      const plantName = workCtr.substring(2).trim();
+
+      const config = emailConfig.find(
+        (item) => item.plantName.toUpperCase() === plantName
+      );
+
+      if (!config) return;
+
+      // Process Mail
+      if (config.processEmail) {
+        recipients.add(config.processEmail);
+      }
+
+      // Department Mail
+      switch (department) {
+        case "MR":
+          if (config.rotaryMail)
+            recipients.add(config.rotaryMail);
+          break;
+
+        case "MS":
+          if (config.staticMail)
+            recipients.add(config.staticMail);
+          break;
+
+        case "MI":
+          if (config.inspectionMail)
+            recipients.add(config.inspectionMail);
+          break;
+
+        case "ME":
+          if (config.electricalMail)
+            recipients.add(config.electricalMail);
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    if (recipients.size === 0) {
+      toast.error("No recipients found");
+      return;
+    }
+
+    const subject =
+      `Pending Notifications (${filteredRawData.length})`;
+
+    const sample = filteredRawData[0] || {};
+    const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
+    const typeKey = findKey(sample, ['Type', 'Notification Type', 'Notif Type', 'NotificationType', 'Notifictn type']);
+    const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
+    const desc1Key = Object.keys(sample).find((k) => k?.toLowerCase() === "description");
+
+    let notificationListStr = `---------------------------------------------------------------------------\n`;
+    notificationListStr += `| S.No | Plant | Notification | Date | Type | Desc |\n`;
+    notificationListStr += `---------------------------------------------------------------------------\n\n`;
+
+    filteredRawData.forEach((row, idx) => {
+      const workCtrKey = findKey(row, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
+      const workCtr = String(row[workCtrKey] || "").trim().toUpperCase();
+      const plant = workCtr.length >= 2 && ["MR", "MS", "MI", "ME", "FS", "MC"].some(p => workCtr.startsWith(p)) 
+        ? workCtr.substring(2).trim() 
+        : workCtr;
+      const notif = row[notificationKey] || "";
+      let dateVal = row[notifDateKey];
+      let displayDate = "";
+      if (dateVal) {
+        let d;
+        if (dateVal instanceof Date) d = dateVal;
+        else if (typeof dateVal === 'number') d = new Date((dateVal - 25569) * 86400 * 1000);
+        else d = new Date(String(dateVal).trim());
+        if (!isNaN(d)) {
+          displayDate = d.toISOString().split('T')[0];
+        } else {
+          displayDate = String(dateVal);
+        }
+      }
+      const type = row[typeKey] || "";
+      const desc = String(row[desc1Key] || "").trim().substring(0, 60);
+
+      notificationListStr += `${idx + 1} | ${plant} | ${notif} | ${displayDate} | ${type} | ${desc}\n`;
+    });
+
+    const body = 
+      `Dear Sir,\n\n` +
+      `Please find below all pending notifications:\n\n` +
+      `${notificationListStr}\n` +
+      `Kindly take necessary action.\n\n` +
+      `Regards,\n` +
+      `Mechanical Maintenance Team`;
+
+    // const mailto =
+    //   `mailto:${Array.from(recipients).join(";")}` +
+    //   `?subject=${encodeURIComponent(subject)}` +
+    //   `&body=${encodeURIComponent(body)}`;
+    // console.log("Recipients:", Array.from(recipients));
+    // console.log(mailto);
+    // window.location.href = mailto;
+    // //window.open(mailto);
+    console.log("Recipients:", Array.from(recipients));
+    Array.from(recipients).forEach((email, index) => {
+      setTimeout(() => {
+        const mailto =
+          `mailto:${email}` +
+          `?subject=${encodeURIComponent(subject)}` +
+          `&body=${encodeURIComponent(body)}`;
+
+        console.log("Opening:", email);
+
+        window.open(mailto, "_blank");
+      }, index * 500);
+    });
   };
 
 
