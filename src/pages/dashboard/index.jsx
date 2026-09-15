@@ -451,7 +451,18 @@ const Dashboard = () => {
       return;
     }
 
-    const recipients = new Set();
+    const emailsData = new Map();
+
+    const addRowToEmail = (email, row) => {
+      if (!email) return;
+      if (!emailsData.has(email)) {
+        emailsData.set(email, []);
+      }
+      // Avoid duplicate rows if somehow added multiple times
+      if (!emailsData.get(email).includes(row)) {
+        emailsData.get(email).push(row);
+      }
+    };
 
     filteredRawData.forEach((row) => {
       const workCtrKey = findKey(row, ["Main WorkCtr", "MainWorkCtr"]);
@@ -470,31 +481,27 @@ const Dashboard = () => {
 
       if (!config) return;
 
-      // Process Mail
+      // Process Mail gets all notifications for this plant
       if (config.processEmail) {
-        recipients.add(config.processEmail);
+        addRowToEmail(config.processEmail, row);
       }
 
-      // Department Mail
+      // Department Mail gets only notifications for their specific department
       switch (department) {
         case "MR":
-          if (config.rotaryMail)
-            recipients.add(config.rotaryMail);
+          if (config.rotaryMail) addRowToEmail(config.rotaryMail, row);
           break;
 
         case "MS":
-          if (config.staticMail)
-            recipients.add(config.staticMail);
+          if (config.staticMail) addRowToEmail(config.staticMail, row);
           break;
 
         case "MI":
-          if (config.inspectionMail)
-            recipients.add(config.inspectionMail);
+          if (config.inspectionMail) addRowToEmail(config.inspectionMail, row);
           break;
 
         case "ME":
-          if (config.electricalMail)
-            recipients.add(config.electricalMail);
+          if (config.electricalMail) addRowToEmail(config.electricalMail, row);
           break;
 
         default:
@@ -502,13 +509,10 @@ const Dashboard = () => {
       }
     });
 
-    if (recipients.size === 0) {
+    if (emailsData.size === 0) {
       toast.error("No recipients found");
       return;
     }
-
-    const subject =
-      `Pending Notifications (${filteredRawData.length})`;
 
     const sample = filteredRawData[0] || {};
     const notificationKey = findKey(sample, ['Notification', 'Notification No', 'Notification Number']);
@@ -516,54 +520,49 @@ const Dashboard = () => {
     const notifDateKey = findKey(sample, ['Notif.date', 'Notification Date', 'Date']);
     const desc1Key = Object.keys(sample).find((k) => k?.toLowerCase() === "description");
 
-    let notificationListStr = `---------------------------------------------------------------------------\n`;
-    notificationListStr += `| S.No | Plant | Notification | Date | Type | Desc |\n`;
-    notificationListStr += `---------------------------------------------------------------------------\n\n`;
+    console.log("Recipients:", Array.from(emailsData.keys()));
 
-    filteredRawData.forEach((row, idx) => {
-      const workCtrKey = findKey(row, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
-      const workCtr = String(row[workCtrKey] || "").trim().toUpperCase();
-      const plant = workCtr.length >= 2 && ["MR", "MS", "MI", "ME", "FS", "MC"].some(p => workCtr.startsWith(p)) 
-        ? workCtr.substring(2).trim() 
-        : workCtr;
-      const notif = row[notificationKey] || "";
-      let dateVal = row[notifDateKey];
-      let displayDate = "";
-      if (dateVal) {
-        let d;
-        if (dateVal instanceof Date) d = dateVal;
-        else if (typeof dateVal === 'number') d = new Date((dateVal - 25569) * 86400 * 1000);
-        else d = new Date(String(dateVal).trim());
-        if (!isNaN(d)) {
-          displayDate = d.toISOString().split('T')[0];
-        } else {
-          displayDate = String(dateVal);
+    Array.from(emailsData.entries()).forEach(([email, rows], index) => {
+      const subject = `Pending Notifications (${rows.length})`;
+
+      let notificationListStr = `---------------------------------------------------------------------------\n`;
+      notificationListStr += `| S.No | Plant | Notification | Date | Type | Desc |\n`;
+      notificationListStr += `---------------------------------------------------------------------------\n\n`;
+
+      rows.forEach((row, idx) => {
+        const workCtrKey = findKey(row, ["Main WorkCtr", "MainWorkCtr", "Unit"]);
+        const workCtr = String(row[workCtrKey] || "").trim().toUpperCase();
+        const plant = workCtr.length >= 2 && ["MR", "MS", "MI", "ME", "FS", "MC"].some(p => workCtr.startsWith(p)) 
+          ? workCtr.substring(2).trim() 
+          : workCtr;
+        const notif = row[notificationKey] || "";
+        let dateVal = row[notifDateKey];
+        let displayDate = "";
+        if (dateVal) {
+          let d;
+          if (dateVal instanceof Date) d = dateVal;
+          else if (typeof dateVal === 'number') d = new Date((dateVal - 25569) * 86400 * 1000);
+          else d = new Date(String(dateVal).trim());
+          if (!isNaN(d)) {
+            displayDate = d.toISOString().split('T')[0];
+          } else {
+            displayDate = String(dateVal);
+          }
         }
-      }
-      const type = row[typeKey] || "";
-      const desc = String(row[desc1Key] || "").trim().substring(0, 60);
+        const type = row[typeKey] || "";
+        const desc = String(row[desc1Key] || "").trim().substring(0, 60);
 
-      notificationListStr += `${idx + 1} | ${plant} | ${notif} | ${displayDate} | ${type} | ${desc}\n`;
-    });
+        notificationListStr += `${idx + 1} | ${plant} | ${notif} | ${displayDate} | ${type} | ${desc}\n`;
+      });
 
-    const body = 
-      `Dear Sir,\n\n` +
-      `Please find below all pending notifications:\n\n` +
-      `${notificationListStr}\n` +
-      `Kindly take necessary action.\n\n` +
-      `Regards,\n` +
-      `Mechanical Maintenance Team`;
+      const body = 
+        `Dear Sir,\n\n` +
+        `Please find below all pending notifications:\n\n` +
+        `${notificationListStr}\n` +
+        `Kindly take necessary action.\n\n` +
+        `Regards,\n` +
+        `Mechanical Maintenance Team`;
 
-    // const mailto =
-    //   `mailto:${Array.from(recipients).join(";")}` +
-    //   `?subject=${encodeURIComponent(subject)}` +
-    //   `&body=${encodeURIComponent(body)}`;
-    // console.log("Recipients:", Array.from(recipients));
-    // console.log(mailto);
-    // window.location.href = mailto;
-    // //window.open(mailto);
-    console.log("Recipients:", Array.from(recipients));
-    Array.from(recipients).forEach((email, index) => {
       setTimeout(() => {
         const mailto =
           `mailto:${email}` +
@@ -571,7 +570,6 @@ const Dashboard = () => {
           `&body=${encodeURIComponent(body)}`;
 
         console.log("Opening:", email);
-
         window.open(mailto, "_blank");
       }, index * 500);
     });
